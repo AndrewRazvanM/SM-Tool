@@ -8,6 +8,6 @@ It is a curses-based terminal dashboard that:
   - Network throughput (/proc/net/dev)
 - Reads Nvidia graphic card telemetry via NVML (pynvml)
 
-  <img width="1920" height="1040" alt="image" src="https://github.com/user-attachments/assets/11979d60-fdbd-4c9d-8235-d6031283857c" />
+<img width="1811" height="781" alt="image" src="https://github.com/user-attachments/assets/2e8440d5-b171-4815-884b-bf1e81331fa4" />
 
 This was mainly done as a learning project, with minimal external dependencies.
