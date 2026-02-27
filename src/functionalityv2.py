@@ -509,8 +509,8 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
     else:
         time_delta= -1
     path= "/proc"
-    stat_data = {} #process cpu load and mem consumption
-    status_data={} #process info and mem consumption
+    stat_data = {} #process info and cpu load
+    status_data={} #detailed process info and mem consumption
 
     process_cpu_load= {}
     data_length_index=0
@@ -584,11 +584,13 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
     return stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second
 
 
-# def main():
-#     status_index= 2
-#     stat_data, status_data, process_cpu_load, status_index= current_processes()
-#     print(process_cpu_load)
+def main():
+    status_index= 2
+    V= 1
+    stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second= current_processes()
+    print(f"Name: {stat_data[V].name}\nThreads: {stat_data[V].num_threads}\nVirt Mem: {stat_data[V].vsize}\nRSS: {stat_data[V].rss}\nPriority: {stat_data[V].priority}\nStart Time: {stat_data[V].starttime}\nU Time: {stat_data[V].utime}")
+   
     
 
-# if __name__ == "__main__":
-#      raise SystemExit(main())
+if __name__ == "__main__":
+     raise SystemExit(main())

@@ -379,7 +379,7 @@ def main(stdscr):
             gpu_data, gpu_fan_disabled, gpu_mem_disabled= nvidia_gpu_readings(gpu_check_disable, gpu_handles, gpu_fan_disabled, gpu_mem_disabled)
             next_gpu_read= data_collection + 1
 
-        process_content_refresh= False #optimization -> build the process list only when new list is generated
+        process_content_refresh= False #decouples content list building from TUI refresh
         if data_collection > next_process_scan:
             stat_data, status_data, process_cpu_load, status_index, prev_time, ticks_per_second= current_processes(stat_data, data_length, status_index, prev_time, ticks_per_second)
             next_process_scan= data_collection + 2
@@ -611,8 +611,8 @@ def main(stdscr):
         if process_window is not None:
             
             if process_cpu_load != {}:
-                if process_content_refresh is True: #build content list only when new list is generated
-                    process_window_content= [None] * len(stat_data) #small optimization -> pre-allocates list-size
+                if process_content_refresh is True: #decouples content list building from TUI refresh. Build content list only when new list is generated
+                    process_window_content= []
                     last_column= (process_window_columns- max_pid_width)
                     sorted_processes= sorted(process_cpu_load.items(), key= lambda item:item[1], reverse= True)
 
@@ -625,14 +625,14 @@ def main(stdscr):
                         state_string= list(f"{stat_data[PID].state:<{process_window_avail_columns}}")
                         process_uptime_seconds= (stat_data[PID].process_time/ticks_per_second) #coverts the process time to seconds
                         if process_uptime_seconds >60:
-                            process_uptime_values= f"{process_uptime_seconds//60} M" #converts the time to minute and makes it a string
+                            process_uptime_values= f"{round(process_uptime_seconds/60,1)} M" #converts the time to minute and makes it a string
                         else:
                             process_uptime_values= f"{process_uptime_seconds} S" #makes it into a string and keeps it as seconds
 
                         process_uptime_string= list(f"{process_uptime_values:<{process_window_avail_columns}}") 
                         cpu_string= list(f"{cpu_load:<{process_window_avail_columns}}")
                         if PID in status_data:
-                            ppid_string= list(f"{status_data[PID].PPid:>{max_pid_width}}")
+                            ppid_string= list(f"{status_data[PID].PPid:<{max_pid_width}}")
                         else:
                             ppid_string= list("N/A")
                         threads_string= list(f"{stat_data[PID].num_threads:<{process_window_avail_columns}}")
@@ -641,25 +641,25 @@ def main(stdscr):
                         pMem_string= list(f"{stat_data[PID].rss:<{process_window_avail_columns}}")
 
                         #add the strings in a list on specific positions
-                        empty_string[0:ppid_position]= name_string
-                        empty_string[ppid_position - max_pid_width:priority_position - 1]= ppid_string
-                        empty_string[priority_position - max_pid_width:state_position-1]= priority_string[-process_window_avail_columns:]
-                        empty_string[state_position - max_pid_width:total_time_position-1]= state_string[-process_window_avail_columns:]
-                        empty_string[total_time_position - max_pid_width:cpu_position-1]= process_uptime_string[-process_window_avail_columns:]
-                        empty_string[cpu_position - max_pid_width:threads_position-1]= cpu_string[-process_window_avail_columns:]
-                        empty_string[threads_position - max_pid_width:vMem_position-1]= threads_string[-process_window_avail_columns:]
-                        empty_string[vMem_position - max_pid_width:pMem_position-1]= vMem_string[-process_window_avail_columns:]
+                        empty_string[0:ppid_position]= name_string[-name_max:]
+                        empty_string[ppid_position - max_pid_width:priority_position]= ppid_string[-max_pid_width:]
+                        empty_string[priority_position - max_pid_width:state_position]= priority_string[-process_window_avail_columns:]
+                        empty_string[state_position - max_pid_width:total_time_position]= state_string[-process_window_avail_columns:]
+                        empty_string[total_time_position - max_pid_width:cpu_position]= process_uptime_string[-process_window_avail_columns:]
+                        empty_string[cpu_position - max_pid_width:threads_position]= cpu_string[-process_window_avail_columns:]
+                        empty_string[threads_position - max_pid_width:vMem_position]= threads_string[-process_window_avail_columns:]
+                        empty_string[vMem_position - max_pid_width:pMem_position]= vMem_string[-process_window_avail_columns:]
                         empty_string[pMem_position - max_pid_width:last_column]= pMem_string[-process_window_avail_columns:]
                         #combine them into a single one
                         content= "".join(empty_string)
-                        process_window_content[i] = (PID, content) #build content list
+                        process_window_content.append((PID, content)) #build content list
 
             else:
-                process_window_content= [None] * len(stat_data) #small optimization -> pre-allocates list-size
+                process_window_content= []
                 for i, PID in enumerate(stat_data):
                     content= f"{stat_data[PID].name:>{max_pid_width}}"
                     content= content+ " "* process_window_avail_columns
-                    process_window_content[i] =  (PID, content) #build content list
+                    process_window_content.append((PID, content)) #build content list
 
             if key_press == curses.KEY_DOWN:
                 scroll_pos = min(scroll_pos + 1, len(process_window_content) - (process_window_lenght-1))
