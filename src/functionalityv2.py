@@ -514,6 +514,13 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
 
     process_cpu_load= {}
     data_length_index=0
+    if status_index == 2:
+        status_scan= True
+        status_index= 0
+    else:
+        status_scan= False
+        status_index+= 1
+
     for proc_folder_path in os.scandir(path):
         if not proc_folder_path.name.isdigit():
             continue  
@@ -538,8 +545,7 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
                     continue
 
             #does the calculation only once every 2 times
-            if status_index == 2:
-                status_index= 0
+            if status_scan is True:
                 status_file= f"{path}/{PID}/status"
                 proc_status= ProcessStatus()
                 try:
@@ -559,7 +565,6 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
                     except:
                         continue
     
-    status_index+= 1
     if (prev_stat_data is not None) and (time_delta > 0):
         common_pids = prev_stat_data.keys() & stat_data.keys()
         for PID in common_pids:

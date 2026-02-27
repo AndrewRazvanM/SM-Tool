@@ -604,7 +604,7 @@ def main(stdscr):
 
             cpu_load_window.noutrefresh()
 
-        # Process Window dinamic render
+        #Process Window dinamic render
         #supports scrolling through the process list
         if process_window is not None:
 
