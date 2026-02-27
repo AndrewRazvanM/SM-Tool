@@ -267,10 +267,7 @@ def main(stdscr):
     cpu_name= get_cpu_name(cpu_check_disable)
     gpu_name, gpu_handles= nvidia_gpu_name(gpu_check_disable)
     cpu_load_raw_data_prev, cpu_calc_load = get_cpu_load(cpu_check_disable, file_path)
-    stat_data, status_data, process_cpu_load, status_index, prev_time, ticks_per_second= current_processes(prev_stat_data= None, data_length= 150, status_index= 0, prev_time= None, ticks_per_second= None)
-
-    network_raw_data= None
-    time_netw= None
+    stat_data, status_data, process_cpu_load, status_index, prev_time, ticks_per_second= current_processes(prev_stat_data= None, data_length= 30, status_index= 0, prev_time= None, ticks_per_second= None)
 
     stdscr.clear()
     curses.curs_set(0)
@@ -293,7 +290,7 @@ def main(stdscr):
     #initialize the content windows and static interfaces
     cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window= generate_windows(stdscr)
         ##calculates how to fit all cpus loads in the cpu load window
-    if cpu_load_window != None:
+    if cpu_load_window is not None:
             lines_cpu_w, columns_cpu_w = cpu_load_window.getmaxyx()
             displayed_lines= (lines_cpu_w-4)//3
             columns_needed= int(((len(cpu_load_raw_data_prev)-1) + displayed_lines)/displayed_lines)
@@ -326,7 +323,7 @@ def main(stdscr):
     interval = 0.2
     interface_refresh = time.monotonic()
         #for processes
-    next_process_scan= 2 # will scan the processes once every 2 seconds
+    next_process_scan= time.monotonic()# will scan the processes once every 2 seconds
     stat_data= None
     status_index= 0
     data_length= 500 #will make this changable by the user in the future
@@ -338,6 +335,9 @@ def main(stdscr):
     next_gpu_read= 1 #reads every 1 sec
         #for memory
     next_pressure_mem_read= 0 #reads every sec
+        #for network
+    network_raw_data= None
+    time_netw= None
 
     while True:
         data_collection= time.monotonic()
@@ -379,9 +379,11 @@ def main(stdscr):
             gpu_data, gpu_fan_disabled, gpu_mem_disabled= nvidia_gpu_readings(gpu_check_disable, gpu_handles, gpu_fan_disabled, gpu_mem_disabled)
             next_gpu_read= data_collection + 1
 
+        process_content_refresh= False #optimization -> build the process list only when new list is generated
         if data_collection > next_process_scan:
             stat_data, status_data, process_cpu_load, status_index, prev_time, ticks_per_second= current_processes(stat_data, data_length, status_index, prev_time, ticks_per_second)
             next_process_scan= data_collection + 2
+            process_content_refresh= True
 
         #CPU window dinamic data render
         cpu_window.addstr(6,2, f"{cpu_pressure["avg10"]:>4}")
@@ -607,51 +609,53 @@ def main(stdscr):
         #Process Window dinamic render
         #supports scrolling through the process list
         if process_window is not None:
-
-            process_window_content= [None] * len(stat_data) #small optimization -> pre-allocates list-size
             
             if process_cpu_load != {}:
-                last_column= (process_window_columns- max_pid_width)
-                sorted_processes= sorted(process_cpu_load.items(), key= lambda item:item[1], reverse= True)
-                for i, tuplet in enumerate(sorted_processes):
-                    PID, cpu_load = tuplet
-                    #create the strings 
-                    empty_string= list(" " * last_column)
-                    name_string= list(f"{stat_data[PID].name:<{name_max}}")
-                    priority_string= list(f"{stat_data[PID].priority:>4}")
-                    state_string= list(f"{stat_data[PID].state:<{process_window_avail_columns}}")
-                    process_uptime_seconds= (stat_data[PID].process_time/ticks_per_second) #coverts the process time to seconds
-                    if process_uptime_seconds >60:
-                        process_uptime_values= f"{process_uptime_seconds//60} M" #converts the time to minute and makes it a string
-                    else:
-                        process_uptime_values= f"{process_uptime_seconds} S" #makes it into a string and keeps it as seconds
+                if process_content_refresh is True: #build content list only when new list is generated
+                    process_window_content= [None] * len(stat_data) #small optimization -> pre-allocates list-size
+                    last_column= (process_window_columns- max_pid_width)
+                    sorted_processes= sorted(process_cpu_load.items(), key= lambda item:item[1], reverse= True)
 
-                    process_uptime_string= list(f"{process_uptime_values:<{process_window_avail_columns}}") 
-                    cpu_string= list(f"{cpu_load:<{process_window_avail_columns}}")
-                    if PID in status_data:
-                        ppid_string= list(f"{status_data[PID].PPid:>{max_pid_width}}")
-                    else:
-                        ppid_string= list("N/A")
-                    threads_string= list(f"{stat_data[PID].num_threads:<{process_window_avail_columns}}")
-                    vMem_value= f"{stat_data[PID].vsize} GB"
-                    vMem_string= list(f"{vMem_value:<{process_window_avail_columns}}")
-                    pMem_string= list(f"{stat_data[PID].rss:<{process_window_avail_columns}}")
+                    for i, tuplet in enumerate(sorted_processes):
+                        PID, cpu_load = tuplet
+                        #create the strings 
+                        empty_string= list(" " * last_column)
+                        name_string= list(f"{stat_data[PID].name:<{name_max}}")
+                        priority_string= list(f"{stat_data[PID].priority:>4}")
+                        state_string= list(f"{stat_data[PID].state:<{process_window_avail_columns}}")
+                        process_uptime_seconds= (stat_data[PID].process_time/ticks_per_second) #coverts the process time to seconds
+                        if process_uptime_seconds >60:
+                            process_uptime_values= f"{process_uptime_seconds//60} M" #converts the time to minute and makes it a string
+                        else:
+                            process_uptime_values= f"{process_uptime_seconds} S" #makes it into a string and keeps it as seconds
 
-                    #add the strings in a list on specific positions
-                    empty_string[0:ppid_position]= name_string
-                    empty_string[ppid_position - max_pid_width:priority_position - 1]= ppid_string
-                    empty_string[priority_position - max_pid_width:state_position-1]= priority_string[-process_window_avail_columns:]
-                    empty_string[state_position - max_pid_width:total_time_position-1]= state_string[-process_window_avail_columns:]
-                    empty_string[total_time_position - max_pid_width:cpu_position-1]= process_uptime_string[-process_window_avail_columns:]
-                    empty_string[cpu_position - max_pid_width:threads_position-1]= cpu_string[-process_window_avail_columns:]
-                    empty_string[threads_position - max_pid_width:vMem_position-1]= threads_string[-process_window_avail_columns:]
-                    empty_string[vMem_position - max_pid_width:pMem_position-1]= vMem_string[-process_window_avail_columns:]
-                    empty_string[pMem_position - max_pid_width:last_column]= pMem_string[-process_window_avail_columns:]
-                    #combine them into a single one
-                    content= "".join(empty_string)
-                    process_window_content[i] = (PID, content) #build content list
+                        process_uptime_string= list(f"{process_uptime_values:<{process_window_avail_columns}}") 
+                        cpu_string= list(f"{cpu_load:<{process_window_avail_columns}}")
+                        if PID in status_data:
+                            ppid_string= list(f"{status_data[PID].PPid:>{max_pid_width}}")
+                        else:
+                            ppid_string= list("N/A")
+                        threads_string= list(f"{stat_data[PID].num_threads:<{process_window_avail_columns}}")
+                        vMem_value= f"{stat_data[PID].vsize} GB"
+                        vMem_string= list(f"{vMem_value:<{process_window_avail_columns}}")
+                        pMem_string= list(f"{stat_data[PID].rss:<{process_window_avail_columns}}")
+
+                        #add the strings in a list on specific positions
+                        empty_string[0:ppid_position]= name_string
+                        empty_string[ppid_position - max_pid_width:priority_position - 1]= ppid_string
+                        empty_string[priority_position - max_pid_width:state_position-1]= priority_string[-process_window_avail_columns:]
+                        empty_string[state_position - max_pid_width:total_time_position-1]= state_string[-process_window_avail_columns:]
+                        empty_string[total_time_position - max_pid_width:cpu_position-1]= process_uptime_string[-process_window_avail_columns:]
+                        empty_string[cpu_position - max_pid_width:threads_position-1]= cpu_string[-process_window_avail_columns:]
+                        empty_string[threads_position - max_pid_width:vMem_position-1]= threads_string[-process_window_avail_columns:]
+                        empty_string[vMem_position - max_pid_width:pMem_position-1]= vMem_string[-process_window_avail_columns:]
+                        empty_string[pMem_position - max_pid_width:last_column]= pMem_string[-process_window_avail_columns:]
+                        #combine them into a single one
+                        content= "".join(empty_string)
+                        process_window_content[i] = (PID, content) #build content list
 
             else:
+                process_window_content= [None] * len(stat_data) #small optimization -> pre-allocates list-size
                 for i, PID in enumerate(stat_data):
                     content= f"{stat_data[PID].name:>{max_pid_width}}"
                     content= content+ " "* process_window_avail_columns
