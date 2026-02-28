@@ -42,6 +42,18 @@ def generate_windows(stdscr):
     memory_window = curses.newwin(mem_h, mem_w, start_y + cpu_h, start_x)
     network_window = curses.newwin(net_h, net_w, start_y + cpu_h + mem_h, start_x)
     gpu_window = curses.newwin(gpu_h, gpu_w, start_y + cpu_h + mem_h + net_h, start_x)
+
+    #setting background color for windows
+    normal_text= 4
+    stdscr.bkgd(" ", curses.color_pair(normal_text))
+    cpu_window.bkgd(" ", curses.color_pair(normal_text))
+    memory_window.bkgd(" ", curses.color_pair(normal_text))
+    network_window.bkgd(" ", curses.color_pair(normal_text))
+    gpu_window.bkgd(" ", curses.color_pair(normal_text))
+    if cpu_load_window is not None:
+        cpu_load_window.bkgd(" ", curses.color_pair(normal_text))
+    if process_window is not None:
+        process_window.bkgd(" ", curses.color_pair(normal_text))
         
     return cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window
 
@@ -61,21 +73,9 @@ def static_interface(
     process_window,
     stat_data
 ):
-    normal_text= 4
     green_text= 5
     _, columns = stdscr.getmaxyx()
     stdscr.addstr(0, columns // 2 - 11, "System Monitoring Tool", curses.A_BOLD)
-
-    #setting Backgrounds
-    stdscr.bkgd(" ", curses.color_pair(normal_text))
-    cpu_window.bkgd(" ", curses.color_pair(normal_text))
-    memory_window.bkgd(" ", curses.color_pair(normal_text))
-    network_window.bkgd(" ", curses.color_pair(normal_text))
-    gpu_window.bkgd(" ", curses.color_pair(normal_text))
-    if cpu_load_window is not None:
-        cpu_load_window.bkgd(" ", curses.color_pair(normal_text))
-    if process_window is not None:
-        process_window.bkgd(" ", curses.color_pair(normal_text))
 
     # ---- CPU WINDOW ----
     cpu_window.box()
@@ -174,7 +174,7 @@ def static_interface(
 
     # ---- Processes List Window ----
     if process_window is not None:
-        proc_win_lines, proc_win_columns= process_window.getmaxyx()
+        _, proc_win_columns= process_window.getmaxyx()
         prev_PID= 0
         name_max= 0
         for PID in stat_data:
@@ -261,14 +261,10 @@ def main(stdscr):
         pynvml.NVMLError_NoPermission) as error:
         gpu_check_disable= True
 
-    #collect initial readings needed to initialize the interface
-    cpu_sensor, cpu_sensor_path= probe_cpu_sensors(cpu_check_disable)
-    cpu_temp_data, cpu_temp_path= cpu_readings(cpu_check_disable, cpu_sensor_path)
-    cpu_name= get_cpu_name(cpu_check_disable)
-    gpu_name, gpu_handles= nvidia_gpu_name(gpu_check_disable)
-    cpu_load_raw_data_prev, cpu_calc_load = get_cpu_load(cpu_check_disable, file_path)
-    stat_data, status_data, process_cpu_load, status_index, prev_time, ticks_per_second= current_processes(prev_stat_data= None, data_length= 30, status_index= 0, prev_time= None, ticks_per_second= None)
-
+    cpu_sensor, cpu_sensor_path= probe_cpu_sensors(cpu_check_disable) #check for available temp sensor and cache the path
+    cpu_name= get_cpu_name(cpu_check_disable) #check for the CPU name and cache it
+    gpu_name, gpu_handles= nvidia_gpu_name(gpu_check_disable) #check for the GPU name and cache it
+  
     stdscr.clear()
     curses.curs_set(0)
     stdscr.keypad(True)
@@ -287,22 +283,8 @@ def main(stdscr):
     curses.curs_set(0) #set cursor to invisible
     stdscr.keypad(True)
     stdscr.nodelay(True)
-    #initialize the content windows and static interfaces
-    cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window= generate_windows(stdscr)
-        ##calculates how to fit all cpus loads in the cpu load window
-    if cpu_load_window is not None:
-            lines_cpu_w, columns_cpu_w = cpu_load_window.getmaxyx()
-            displayed_lines= (lines_cpu_w-4)//3
-            columns_needed= int(((len(cpu_load_raw_data_prev)-1) + displayed_lines)/displayed_lines)
-            cpu_load_window_ratio= (columns_cpu_w-2)//columns_needed
-    else:
-        cpu_load_window_ratio= 1
 
-    max_pid_width, ppid_position, priority_position, state_position, total_time_position, cpu_position, threads_position, vMem_position, pMem_position, process_window_avail_columns, name_max= static_interface(stdscr,cpu_name,cpu_load_raw_data_prev,cpu_temp_data,cpu_sensor,gpu_name, cpu_window, memory_window, network_window, gpu_window,cpu_load_window,cpu_load_window_ratio, process_window, stat_data)
-    if process_window is not None:
-        process_window_lenght, process_window_columns = process_window.getmaxyx()
-
-    #initialize colors, assign pairs, set default colors and set default background
+    #initialize colors, assign color pairs
     curses.start_color()
     curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
@@ -314,23 +296,25 @@ def main(stdscr):
     curses.init_pair(8, curses.COLOR_WHITE, curses.COLOR_GREEN)
 
     #initialize static variables
+    initial_read= True
         #for cpu
     next_temp_net_read= 0 #will scan for temperatures once a second
     next_load_read= 0 #will calculate the cpu load 2 times a second
     cpu_average_temp= 0
     cpu_load_raw_data= {}
+    cpu_temp_path= None
         #for monotonic time measuring
     interval = 0.2
     interface_refresh = time.monotonic()
         #for processes
-    next_process_scan= time.monotonic()# will scan the processes once every 2 seconds
+    next_process_scan= 0# will scan the processes once every 2 seconds
     stat_data= None
     status_index= 0
     data_length= 500 #will make this changable by the user in the future
     process_window_content= []
     scroll_pos = 0
-    if process_window is not None:
-        process_window_lenght, process_window_columns = process_window.getmaxyx()
+    prev_time= None
+    ticks_per_second= None
         #for gpu
     next_gpu_read= 1 #reads every 1 sec
         #for memory
@@ -350,6 +334,7 @@ def main(stdscr):
             #calculate how many processes can fit in the window
             if process_window is not None:
                 process_window_lenght, _= process_window.getmaxyx()
+
             if cpu_load_window is not None:
                 lines_cpu_w, columns_cpu_w = cpu_load_window.getmaxyx()
                 #calculates how to fit all cpus loads in the cpu load window
@@ -357,6 +342,7 @@ def main(stdscr):
                 columns_needed= int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines)
                 cpu_load_window_ratio= (columns_cpu_w-2)//columns_needed 
             max_pid_width, ppid_position, priority_position, state_position, total_time_position, cpu_position, threads_position, vMem_position, pMem_position, process_window_avail_columns, name_max= static_interface(stdscr,cpu_name,cpu_load_raw_data,cpu_temp_data,cpu_sensor,gpu_name,cpu_window,memory_window,network_window,gpu_window, cpu_load_window, cpu_load_window_ratio, process_window, stat_data)
+
             if process_window is not None:
                 process_window_lenght, process_window_columns = process_window.getmaxyx()
 
@@ -384,6 +370,23 @@ def main(stdscr):
             stat_data, status_data, process_cpu_load, status_index, prev_time, ticks_per_second= current_processes(stat_data, data_length, status_index, prev_time, ticks_per_second)
             next_process_scan= data_collection + 2
             process_content_refresh= True
+
+        #initialize the interface on start-up
+        if initial_read is True:
+            cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window= generate_windows(stdscr)
+            initial_read= False
+            ##calculates how to fit all cpus loads in the cpu load window
+            if cpu_load_window is not None:
+                    lines_cpu_w, columns_cpu_w = cpu_load_window.getmaxyx()
+                    displayed_lines= (lines_cpu_w-4)//3
+                    columns_needed= int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines)
+                    cpu_load_window_ratio= (columns_cpu_w-2)//columns_needed
+            else:
+                cpu_load_window_ratio= 1
+
+            max_pid_width, ppid_position, priority_position, state_position, total_time_position, cpu_position, threads_position, vMem_position, pMem_position, process_window_avail_columns, name_max= static_interface(stdscr,cpu_name,cpu_load_raw_data,cpu_temp_data,cpu_sensor,gpu_name, cpu_window, memory_window, network_window, gpu_window,cpu_load_window,cpu_load_window_ratio, process_window, stat_data)
+            if process_window is not None:
+                process_window_lenght, process_window_columns = process_window.getmaxyx()
 
         #CPU window dinamic data render
         cpu_window.addstr(6,2, f"{cpu_pressure["avg10"]:>4}")
