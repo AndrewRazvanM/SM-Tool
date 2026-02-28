@@ -184,7 +184,7 @@ def static_interface(
             if name > name_max:
                 name_max= name
             
-        max_pid_width= len(str(prev_PID))
+        max_pid_width= max(3,len(str(prev_PID)))
         process_window_avail_columns= (proc_win_columns - max_pid_width - name_max)//8
         ppid_position=  max_pid_width + name_max
         priority_position= ppid_position + process_window_avail_columns
@@ -613,32 +613,33 @@ def main(stdscr):
             if process_cpu_load != {}:
                 if process_content_refresh is True: #decouples content list building from TUI refresh. Build content list only when new list is generated
                     process_window_content= []
-                    last_column= (process_window_columns- max_pid_width)
+                    last_column= (process_window_columns- max_pid_width - name_max)
                     sorted_processes= sorted(process_cpu_load.items(), key= lambda item:item[1], reverse= True)
 
+                    #Need to rewrite so it's using only f-strings. Maybe this will get rid of the visual bugs
                     for i, tuplet in enumerate(sorted_processes):
                         PID, cpu_load = tuplet
                         #create the strings 
                         empty_string= list(" " * last_column)
-                        name_string= list(f"{stat_data[PID].name:<{name_max}}")
-                        priority_string= list(f"{stat_data[PID].priority:>4}")
-                        state_string= list(f"{stat_data[PID].state:<{process_window_avail_columns}}")
+                        name_string= f"{stat_data[PID].name:<{name_max}}"
+                        priority_string= f"{stat_data[PID].priority:>4}"
+                        state_string= f"{stat_data[PID].state:<{process_window_avail_columns}}"
                         process_uptime_seconds= (stat_data[PID].process_time/ticks_per_second) #coverts the process time to seconds
                         if process_uptime_seconds >60:
                             process_uptime_values= f"{round(process_uptime_seconds/60,1)} M" #converts the time to minute and makes it a string
                         else:
                             process_uptime_values= f"{process_uptime_seconds} S" #makes it into a string and keeps it as seconds
 
-                        process_uptime_string= list(f"{process_uptime_values:<{process_window_avail_columns}}") 
-                        cpu_string= list(f"{cpu_load:<{process_window_avail_columns}}")
+                        process_uptime_string= f"{process_uptime_values:<{process_window_avail_columns}}"[:process_window_avail_columns]
+                        cpu_string= f"{cpu_load:<{process_window_avail_columns}}"
                         if PID in status_data:
-                            ppid_string= list(f"{status_data[PID].PPid:<{max_pid_width}}")
+                            ppid_string= f"{status_data[PID].PPid:<{max_pid_width}}"
                         else:
-                            ppid_string= list("N/A")
-                        threads_string= list(f"{stat_data[PID].num_threads:<{process_window_avail_columns}}")
+                            ppid_string= "N/A"
+                        threads_string= f"{stat_data[PID].num_threads:<{process_window_avail_columns}}"
                         vMem_value= f"{stat_data[PID].vsize} GB"
-                        vMem_string= list(f"{vMem_value:<{process_window_avail_columns}}")
-                        pMem_string= list(f"{stat_data[PID].rss:<{process_window_avail_columns}}")
+                        vMem_string= f"{vMem_value:<{process_window_avail_columns}}"
+                        pMem_string= f"{stat_data[PID].rss:<{process_window_avail_columns}}"[:process_window_avail_columns]
 
                         #add the strings in a list on specific positions
                         empty_string[0:ppid_position]= name_string[-name_max:]
