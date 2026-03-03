@@ -461,7 +461,6 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
     return data, network_data, current_time
 
 class ProcessStat:
-    """Is a single process' essential stats."""
 
     __slots__ = (
         "name",
@@ -503,11 +502,13 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
     #https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
     if ticks_per_second is None:
         ticks_per_second = os.sysconf(os.sysconf_names["SC_CLK_TCK"]) #used for process load calculation
+
     current_time = time.monotonic() #used to calculate the difference in time between current and last calculation
     if prev_time is not None:
         time_delta= current_time - prev_time
     else:
         time_delta= -1
+
     path= "/proc"
     stat_data = {} #process info and cpu load
     status_data={} #detailed process info and mem consumption
@@ -537,6 +538,7 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
                     stats_list= stats.split()
                     process= ProcessStat(name,stats_list)
                     stat_data[PID]= process
+
             except FileNotFoundError:
                 #handles exception for new processes that are killed while I'm reading them
                 try:
@@ -584,13 +586,13 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
     return stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second
 
 
-def main():
-    status_index= 2
-    V= 1
-    stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second= current_processes()
-    print(f"Name: {stat_data[V].name}\nThreads: {stat_data[V].num_threads}\nVirt Mem: {stat_data[V].vsize}\nRSS: {stat_data[V].rss}\nPriority: {stat_data[V].priority}\nStart Time: {stat_data[V].starttime}\nU Time: {stat_data[V].utime}")
+# def main():
+#     status_index= 2
+#     V= 1
+#     stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second= current_processes()
+#     print(f"Name: {stat_data[V].name}\nThreads: {stat_data[V].num_threads}\nVirt Mem: {stat_data[V].vsize}\nRSS: {stat_data[V].rss}\nPriority: {stat_data[V].priority}\nStart Time: {stat_data[V].starttime}\nU Time: {stat_data[V].utime}")
    
     
 
-if __name__ == "__main__":
-     raise SystemExit(main())
+# if __name__ == "__main__":
+#      raise SystemExit(main())
