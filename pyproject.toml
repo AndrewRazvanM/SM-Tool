@@ -1,9 +1,11 @@
 [project]
 name = "sm-tool"
 version = "0.1.0"
+description = "System Monitoring tool written in Python."
+readme = "README.md"
+requires-python = ">=3.10"
 dependencies = [
     "nvidia-ml-py>=13.590.48",        # NVIDIA NVML Python bindings
-    "requires-python>=3.10"
 ]
 
 
