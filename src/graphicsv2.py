@@ -80,7 +80,7 @@ def static_interface(
     # ---- CPU WINDOW ----
     cpu_window.box()
     cpu_window.addstr(0, 15, "CPU Dashboard", curses.A_BOLD)
-    cpu_window.addstr(1, 48 - len(cpu_name), cpu_name)
+    cpu_window.addstr(1, max(0,48 - len(cpu_name)), cpu_name)
 
     cpu_window.addstr(2, 7, "CPU Cores:")
     cpu_window.addstr(2, 18, f"{len(cpu_temp_data) - 2}")
@@ -316,7 +316,7 @@ def main(stdscr):
     prev_time= None
     ticks_per_second= None
         #for gpu
-    next_gpu_read= 1 #reads every 1 sec
+    next_gpu_read= 0 #reads every 1 sec
         #for memory
     next_pressure_mem_read= 0 #reads every sec
         #for network
@@ -520,45 +520,6 @@ def main(stdscr):
 
         network_window.noutrefresh()
 
-        #GPU Window Dinamic content
-        if gpu_handles is not None:
-            if gpu_check_disable is not True:
-                gpu_window.addstr(2, 14, f"{gpu_data[0]["GPU Clock Speed"]:>6} MHz")
-                gpu_window.addstr(3, 14, f"{gpu_data[0]["GPU Mem Clock"]:>6} Mhz")
-
-            else:
-                gpu_window.addstr(2, 14, f"{gpu_data[0]["GPU Clock Speed"]:>6}")
-                gpu_window.addstr(3, 14, f"{gpu_data[0]["GPU Mem Clock"]:>6} Mhz")
-
-            gpu_window.addstr(4, 15, f"{gpu_data[0]["Fan Speed"]:>5}")
-            gpu_window.addstr(5, 14, f"{gpu_data[0]["Memory Load"]:>6}")
-            gpu_window.addstr(6, 14, f"{gpu_data[0]["GPU Load"]:>6}")
-            #available width is 49
-            max_bar_width_l= min(49, (gpu_data[0]["GPU Load"]//2)) #guards agains random errors
-            max_bar_width_t= min(49, (gpu_data[0]["Temperature"]//2)) ##guards agains random errors
-            if gpu_check_disable is not True:
-                #gpu load bar
-                gpu_window.hline(7, 1, " ", max_bar_width_l,curses.color_pair(status_bar_ok) | curses.A_REVERSE)
-                gpu_window.hline(7, 1 + max_bar_width_l, " ", 49 - max_bar_width_l)
-                #gpu temp + TEMP bar
-                gpu_window.addstr(8, 14, f"{gpu_data[0]["Temperature"]:>6} °C")
-                if gpu_data[0]["Temperature"] < 75:
-                    gpu_window.hline(9, 1, " ", max_bar_width_t,curses.color_pair(status_bar_ok) | curses.A_REVERSE)
-                    gpu_window.hline(9, 1 + max_bar_width_t, " ", 49 - max_bar_width_t)
-                elif gpu_data[0]["Temperature"] < 87:
-                    gpu_window.hline(9, 1, " ", max_bar_width_t,curses.color_pair(status_bar_warning) | curses.A_REVERSE)
-                    gpu_window.hline(9, 1 + max_bar_width_t, " ", 49 - max_bar_width_t)
-                else:
-                    gpu_window.hline(9, 1, " ", max_bar_width_t,curses.color_pair(status_bar_critical) | curses.A_REVERSE)
-                    gpu_window.hline(9, 1 + max_bar_width_t, " ", 49 - max_bar_width_t)
-        else:
-             gpu_window.addstr(2, 14, "N/A")
-             gpu_window.addstr(3, 14, "N/A")
-             gpu_window.addstr(4, 14, "N/A")
-             gpu_window.addstr(5, 14, "N/A")
-             gpu_window.addstr(6, 14, "N/A")
-
-        gpu_window.noutrefresh()
 
         #cpu load window dinamic render
         if cpu_load_window is not None:
