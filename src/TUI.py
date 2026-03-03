@@ -129,7 +129,7 @@ class StaticInterface():
             pMem_max_length= 8 #len(999 MB) + 2 // currently doesn't convert to MB
             process_text_lengths= (ppid_max_length, user_max_length, priority_max_length, state_max_length, total_time_max_length, threads_max_length, cpu_max_length, vMem_max_length, pMem_max_length)
             #buid the static interface as a single line
-            line= f"{"PID":<{ppid_max_length}}{"PPID":>{ppid_max_length}}{"RunningUnder":>{user_max_length}}{"Priority":>{priority_max_length}}{"ST":>{state_max_length}}{"Up-Time":>{total_time_max_length}}{"Threads":>{threads_max_length}}{"CPU%":>{cpu_max_length}}{"VMem":>{vMem_max_length}}{"RSS":>{pMem_max_length}}{"Name":>5}{" ":>{proc_win_columns}}"
+            line= f"{"PID":<{ppid_max_length}}{"PPID":>{ppid_max_length}}{"RunningUnder":>{user_max_length}}{"Priority":>{priority_max_length}}{"ST":>{state_max_length}}{"Up-Time":>{total_time_max_length}}{"Threads":>{threads_max_length}}{"CPU%":>{cpu_max_length}}{"VMem":>{vMem_max_length}}{"RSS":>{pMem_max_length}}{"Name":>6}{" ":>{proc_win_columns}}"
             process_window.addnstr(0,0, f"{line}", proc_win_columns, curses.color_pair(green_text) | curses.A_REVERSE)
 
         else:
@@ -177,8 +177,8 @@ class CpuDashboard():
     def __init__(self, win):
         self.view= ContentDiff(win)
 
-    def update(self, cpu_temp_data, cpu_pressure_data, cpu_sensor_path, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3):
-        temp_state, pressure_state= cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, status_bar_ok, status_bar_warning, status_bar_critical)
+    def update(self, cpu_temp_data, cpu_pressure_data, cpu_sensor_path):
+        temp_state, pressure_state= cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path)
         self.view.current_lines= cpu_dashboard_layout(temp_state, pressure_state)
 
     def render(self):
@@ -221,8 +221,8 @@ class GpuDashboard():
     def __init__(self, win):
         self.view= ContentDiff(win)
 
-    def update(self, gpu_data, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3):
-        state= gpu_dashboard_state(gpu_data, status_bar_ok, status_bar_warning, status_bar_critical)
+    def update(self, gpu_data, gpu_check_disable, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3):
+        state= gpu_dashboard_state(gpu_data, gpu_check_disable, status_bar_ok, status_bar_warning, status_bar_critical)
         self.view.current_lines= gpu_dashboard_layout(state)
 
     def render(self):
@@ -240,7 +240,7 @@ class ProcessDashboard():
         self.view.render()
 
 
-def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, cpu_check_disable, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3, green_text=5, yellow_text= 6, red_text= 7):
+def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3, green_text=5, yellow_text= 6, red_text= 7):
         #perssure state
         avg10= cpu_pressure_data["avg10"]
         avg60= cpu_pressure_data["avg60"]
@@ -536,8 +536,8 @@ def network_dashboard_layout(total_trans, total_received, total_tr_dropped, tota
 
     return lines
 
-def gpu_dashboard_state(gpu_data, gpu_check_disabled, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3):
-    if gpu_check_disabled is False:
+def gpu_dashboard_state(gpu_data, gpu_check_disable, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3):
+    if gpu_check_disable is False:
         gpu_clock= f"{gpu_data[0]["GPU Clock Speed"]:>6} MHz"
         gpu_mem= f"{gpu_data[0]["GPU Mem Clock"]:>6} Mhz"
         gpu_load=  f"{gpu_data[0]["GPU Load"]:>6}"
@@ -563,12 +563,12 @@ def gpu_dashboard_state(gpu_data, gpu_check_disabled, status_bar_ok= 1, status_b
     else:
         max_bar_width_l= 0
         max_bar_width_t= 0
-        gpu_clock= "N/A"
-        gpu_mem= "N/A"
-        gpu_fan= "N/A"
-        gpu_mem_load= "N/A"
-        gpu_load= "N/A"
-        gpu_temp= "N/A"
+        gpu_clock= " N/A"
+        gpu_mem= " N/A"
+        gpu_fan= " N/A"
+        gpu_mem_load= " N/A"
+        gpu_load= " N/A"
+        gpu_temp= " N/A"
         temp_bar_attr= curses.A_DIM
         gpu_temp_attr= curses.A_DIM
 
@@ -966,7 +966,7 @@ def main(stdscr):
             process_dashboard.render()
 
         #GPU Dashboard dinamic content
-        gpu_dashboard.update(gpu_data)
+        gpu_dashboard.update(gpu_data, gpu_check_disable)
         gpu_dashboard.render()
 
         curses.doupdate()
