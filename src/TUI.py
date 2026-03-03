@@ -232,9 +232,9 @@ class ProcessDashboard():
     def __init__(self, win):
         self.view= ContentDiff(win)
 
-    def update(self, window, process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_window_lines, process_content_refresh, ticks_per_second, scroll_pos):
+    def update(self, process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_window_lines, process_content_refresh, ticks_per_second, scroll_pos):
         state, max_string_size, max_pid_width= processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_content_refresh, ticks_per_second)
-        self.view.current_lines= process_dashboard_content_scrollable_layout (window, state, scroll_pos, process_window_lines,  max_pid_width, max_string_size)
+        self.view.current_lines= process_dashboard_content_scrollable_layout (state, scroll_pos, process_window_lines,  max_pid_width, max_string_size)
 
     def render(self):
         self.view.render()
@@ -699,11 +699,10 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
             
     return process_window_content, max_text_width, max_pid_width
 
-def process_dashboard_content_scrollable_layout (window, content, scroll_pos, window_nr_lines,  max_pid_width, max_text_width):
+def process_dashboard_content_scrollable_layout (content, scroll_pos, window_nr_lines,  max_pid_width, max_text_width):
     white_green= 8
     PID_string_attr= curses.color_pair(white_green) | curses.A_BOLD
     process_string_attr= None
-    window.touchwin()
     #first line is reserved for the static interface
     visible_content= content[scroll_pos:scroll_pos + window_nr_lines- 1]
     visible_content_string_list= []
@@ -962,17 +961,18 @@ def main(stdscr):
             scroll_pos = max(scroll_pos - 1, 0)
 
         if process_window is not None:
-            process_dashboard.update(process_window, process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_window_lines, process_content_refresh, ticks_per_second, scroll_pos)
+            process_dashboard.update(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_window_lines, process_content_refresh, ticks_per_second, scroll_pos)
             process_dashboard.render()
 
         #GPU Dashboard dinamic content
-        gpu_dashboard.update(gpu_data, gpu_check_disable)
-        gpu_dashboard.render()
+        if process_content_refresh or key_press in (curses.KEY_UP, curses.KEY_DOWN):
+            gpu_dashboard.update(gpu_data, gpu_check_disable)
+            gpu_dashboard.render()
 
         curses.doupdate()
 
         #enforicng updates at monotonic intervals
-        interface_refresh += 0.1
+        interface_refresh += 0.2
         sleep_time = interface_refresh - time.monotonic()
         if sleep_time > 0:
             time.sleep(sleep_time)
