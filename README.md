@@ -1,4 +1,4 @@
-Real-time system monitoring tool written in Python with a TUI (hop/thop style). This is meant to be a telemetry dashboard with process inspection, not a process manager.
+Real-time system monitoring tool written in Python with a TUI (hop style). This is meant to be a telemetry dashboard with process inspection. Does not yet have the capability to kill or search processes.
 
 It is a curses-based terminal dashboard that:
 - Reads live kernel telemetry from /proc
