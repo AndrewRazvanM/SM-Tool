@@ -240,7 +240,7 @@ class ProcessDashboard():
         self.view.render()
 
 
-def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3, green_text=5, yellow_text= 6, red_text= 7):
+def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, cpu_check_disable, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3, green_text=5, yellow_text= 6, red_text= 7):
         #perssure state
         avg10= cpu_pressure_data["avg10"]
         avg60= cpu_pressure_data["avg60"]
@@ -269,27 +269,34 @@ def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, statu
             pressure_health_text= "N/A"
             pressure_health_attr= curses.A_DIM
             pressure_bar_attr= curses.A_DIM
+            cpu_pressure_bar_length= 0
 
-        if avg10 < 1.0:
-            avg10_attr= curses.color_pair(green_text) 
-        elif avg10 <5.0:
-            avg10_attr= curses.color_pair(yellow_text) 
-        else:
-            avg10_attr= curses.color_pair(red_text) 
+        if avg60 != "N/A":
+            if avg10 < 1.0:
+                avg10_attr= curses.color_pair(green_text) 
+            elif avg10 <5.0:
+                avg10_attr= curses.color_pair(yellow_text) 
+            else:
+                avg10_attr= curses.color_pair(red_text) 
 
-        if avg60 < 1.0:
-            avg60_attr= curses.color_pair(green_text) 
-        elif avg60 <5.0:
-            avg60_attr= curses.color_pair(yellow_text) 
-        else:
-            avg60_attr= curses.color_pair(red_text) 
+            if avg60 < 1.0:
+                avg60_attr= curses.color_pair(green_text) 
+            elif avg60 <5.0:
+                avg60_attr= curses.color_pair(yellow_text) 
+            else:
+                avg60_attr= curses.color_pair(red_text) 
 
-        if avg300 < 1.0:
-            avg300_attr= curses.color_pair(green_text) 
-        elif avg300 <5.0:
-            avg300_attr= curses.color_pair(yellow_text) 
+            if avg300 < 1.0:
+                avg300_attr= curses.color_pair(green_text) 
+            elif avg300 <5.0:
+                avg300_attr= curses.color_pair(yellow_text) 
+            else:
+                avg300_attr= curses.color_pair(red_text) 
+
         else:
-            avg300_attr= curses.color_pair(red_text) 
+            avg10_attr= curses.A_DIM
+            avg60_attr= curses.A_DIM
+            avg300_attr= curses.A_DIM
 
         avg10= f"{avg10:>4}"
         avg60= f"{avg60:>4}"
@@ -298,6 +305,7 @@ def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, statu
         pressure_state= ((avg10, avg10_attr), (avg60, avg60_attr), (avg300, avg300_attr), (pressure_health_text, pressure_health_attr), (cpu_pressure_bar_length, pressure_bar_attr)) #just for readability
 
         #temperature state
+        
         cpu_die_temp= cpu_temp_data["Package id 0"]
         cpu_average_temp= 0
         if cpu_sensor_path != "N/A":
@@ -316,7 +324,6 @@ def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, statu
                 cpu_average_temp_text= f"{cpu_average_temp:>3} °C"
             else:
                 cpu_average_temp_text= f"{"N/A":<6}"
-                cpu_average_bar_length= 0
 
             #die temp bars. usable width is 24
             if cpu_die_temp != "N/A":
@@ -350,6 +357,7 @@ def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, statu
             cpu_average_temp_text= f"{"N/A":<6}"
             cpu_average_text_attr= curses.A_DIM
             cpu_avgerage_bar_attr= curses.A_DIM
+            cpu_average_bar_length= 0
 
         cpu_state= ((cpu_die_temp_text, cpu_die_temp_attr), (cpu_average_temp_text, cpu_average_text_attr), (cpu_die_bar_length, cpu_die_bar_attr), (cpu_average_bar_length, cpu_avgerage_bar_attr))
 
@@ -528,28 +536,41 @@ def network_dashboard_layout(total_trans, total_received, total_tr_dropped, tota
 
     return lines
 
-def gpu_dashboard_state(gpu_data, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3):
-    gpu_clock= f"{gpu_data[0]["GPU Clock Speed"]:>6} MHz"
-    gpu_mem= f"{gpu_data[0]["GPU Mem Clock"]:>6} Mhz"
-    gpu_load=  f"{gpu_data[0]["GPU Load"]:>6}"
-    gpu_fan= f"{gpu_data[0]["Fan Speed"]:>6}"
-    gpu_mem_load= f"{gpu_data[0]["Memory Load"]:>6}"
-    gpu_temp= f"{gpu_data[0]["Temperature"]:>6} °C"
-    #gpu temp attr
-    gpu_temp_attr= curses.color_pair(status_bar_ok) | curses.A_REVERSE #this is also re-used for the gpu_load_bar color
-    #temp bar attr
-    if gpu_data[0]["Temperature"] < 75:
-        temp_bar_attr= curses.color_pair(status_bar_ok) | curses.A_REVERSE
+def gpu_dashboard_state(gpu_data, gpu_check_disabled, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3):
+    if gpu_check_disabled is False:
+        gpu_clock= f"{gpu_data[0]["GPU Clock Speed"]:>6} MHz"
+        gpu_mem= f"{gpu_data[0]["GPU Mem Clock"]:>6} Mhz"
+        gpu_load=  f"{gpu_data[0]["GPU Load"]:>6}"
+        gpu_fan= f"{gpu_data[0]["Fan Speed"]:>6}"
+        gpu_mem_load= f"{gpu_data[0]["Memory Load"]:>6}"
+        gpu_temp= f"{gpu_data[0]["Temperature"]:>6} °C"
+        #gpu temp attr
+        gpu_temp_attr= curses.color_pair(status_bar_ok) | curses.A_REVERSE #this is also re-used for the gpu_load_bar color
+        #temp bar attr
+        if gpu_data[0]["Temperature"] < 75:
+            temp_bar_attr= curses.color_pair(status_bar_ok) | curses.A_REVERSE
+        
+        elif gpu_data[0]["Temperature"] <87:
+            temp_bar_attr= curses.color_pair(status_bar_warning) | curses.A_REVERSE
+
+        else:
+            temp_bar_attr= curses.color_pair(status_bar_critical) | curses.A_REVERSE
+
+            #available width is 49
+        max_bar_width_l= min(49, (gpu_data[0]["GPU Load"]//2)) #gpu_load_bar length. guards agains random errors
+        max_bar_width_t= min(49, (gpu_data[0]["Temperature"]//2)) #gpu_temp_bar length. guards agains random errors
     
-    elif gpu_data[0]["Temperature"] <87:
-        temp_bar_attr= curses.color_pair(status_bar_warning) | curses.A_REVERSE
-
     else:
-        temp_bar_attr= curses.color_pair(status_bar_critical) | curses.A_REVERSE
-
-        #available width is 49
-    max_bar_width_l= min(49, (gpu_data[0]["GPU Load"]//2)) #gpu_load_bar length. guards agains random errors
-    max_bar_width_t= min(49, (gpu_data[0]["Temperature"]//2)) #gpu_temp_bar length. guards agains random errors
+        max_bar_width_l= 0
+        max_bar_width_t= 0
+        gpu_clock= "N/A"
+        gpu_mem= "N/A"
+        gpu_fan= "N/A"
+        gpu_mem_load= "N/A"
+        gpu_load= "N/A"
+        gpu_temp= "N/A"
+        temp_bar_attr= curses.A_DIM
+        gpu_temp_attr= curses.A_DIM
 
     return (gpu_clock, gpu_mem, gpu_fan, gpu_mem_load, (gpu_load, gpu_temp_attr), (gpu_temp, temp_bar_attr), (max_bar_width_l, max_bar_width_t))
 
@@ -616,6 +637,8 @@ def cpu_load_state(cpu_load_data, cpu_load_window_ratio, cpu_window_lines, cpu_w
         colored_string= " "
         ncolored_string= f"Total Load: N/A"
         bar_length= 0
+        filled_in= 0
+        total_bar_max= 0
 
     cpu_load_state_total= (colored_string, string_with_color_attr, ncolored_string, string_without_color_attr, filled_in, total_bar_max)
 
@@ -769,6 +792,9 @@ def main(stdscr):
     cpu_sensor, cpu_sensor_path= probe_cpu_sensors(cpu_check_disable) #check for available temp sensor and cache the path
     cpu_name= get_cpu_name(cpu_check_disable) #check for the CPU name and cache it
     gpu_name, gpu_handles= nvidia_gpu_name(gpu_check_disable) #check for the GPU name and cache it
+
+    if cpu_sensor_path == "N/A":
+        cpu_check_disable= True
   
     stdscr.clear()
     curses.curs_set(0)
@@ -845,7 +871,7 @@ def main(stdscr):
             if cpu_load_window is not None:
                 cpu_window_lines, cpu_window_columns = cpu_load_window.getmaxyx()
                 displayed_lines= (cpu_window_lines-4)//3
-                columns_needed= int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines)
+                columns_needed= max(1, int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines))
                 cpu_load_window_ratio= (cpu_window_columns-2)//columns_needed
                 cpu_load_dashboard= CpuLoadDashboard(cpu_load_window)
                 static_ui.cpu_load(cpu_load_window, cpu_load_raw_data, cpu_load_window_ratio)
@@ -900,7 +926,7 @@ def main(stdscr):
             if cpu_load_window is not None:
                     cpu_window_lines, cpu_window_columns = cpu_load_window.getmaxyx()
                     displayed_lines= (cpu_window_lines-4)//3
-                    columns_needed= int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines)
+                    columns_needed= max(1, int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines))
                     cpu_load_window_ratio= (cpu_window_columns-2)//columns_needed
                     cpu_load_dashboard= CpuLoadDashboard(cpu_load_window)
                     static_ui.cpu_load(cpu_load_window, cpu_load_raw_data, cpu_load_window_ratio)
