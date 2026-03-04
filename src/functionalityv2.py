@@ -60,6 +60,43 @@ class ProcessStatus:
     def __init__(self):
         pass
 
+class SystemUsername:
+
+    __slots__ = (
+        "name", # This is the user's login name
+        "UID" # This is the user's ID
+    )
+
+    def __init__ (self, line):
+        self.name, _, self.UID, _= line.strip().split(":", 3)
+
+def get_username():
+
+    path= "/etc/passwd"
+    current_user_path= "/var/run/user"
+    username_data= {}
+    current_user_data= {}
+
+    try:
+        with open(path) as f:
+            for line in f:
+                object= SystemUsername(line)
+                username_data[object.UID]= object.name
+
+    except FileNotFoundError:
+        username_data={
+            "0": "root"
+        }
+    
+    try:
+        for uid in os.scandir(current_user_path):
+            current_user_data[uid]= True
+    
+    except FileNotFoundError:
+        pass
+
+    return username_data, current_user_data
+
 def nvidia_gpu_name(gpu_check_disable):
     gpu_handles= None
     if gpu_check_disable is False:
@@ -586,13 +623,9 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
     return stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second
 
 
-# def main():
-#     status_index= 2
-#     V= 1
-#     stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second= current_processes()
-#     print(f"Name: {stat_data[V].name}\nThreads: {stat_data[V].num_threads}\nVirt Mem: {stat_data[V].vsize}\nRSS: {stat_data[V].rss}\nPriority: {stat_data[V].priority}\nStart Time: {stat_data[V].starttime}\nU Time: {stat_data[V].utime}")
-   
-    
+def main():
+    username_data, current_user_data= get_username()
+    print(current_user_data)
 
-# if __name__ == "__main__":
-#      raise SystemExit(main())
+if __name__ == "__main__":
+     raise SystemExit(main())
