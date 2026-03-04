@@ -789,13 +789,13 @@ def process_dashboard_content_scrollable_layout (content,  max_pid_width, max_te
     PID_string_attr= curses.color_pair(white_green) | curses.A_BOLD
     process_string_attr= None
     #first line is reserved for the static interface
-    visible_content_string_list= []
+    padded_content_list= []
 
     for i, (pid_string, string) in enumerate(content): 
-        visible_content_string_list.append((pid_string, max_pid_width, (False, 0, 0), PID_string_attr, 0 + i, 0)) #The tuplet == text, text_max_length (is_bar, bar_length, bar_max), attribute, y, x
-        visible_content_string_list.append((string, max_text_width, (False, 0, 0), process_string_attr, 0 + i, max_pid_width + 1))
+        padded_content_list.append((pid_string, max_pid_width, (False, 0, 0), PID_string_attr, 0 + i, 0)) #The tuplet == text, text_max_length (is_bar, bar_length, bar_max), attribute, y, x
+        padded_content_list.append((string, max_text_width, (False, 0, 0), process_string_attr, 0 + i, max_pid_width + 1))
 
-    return visible_content_string_list
+    return padded_content_list
 
 def invalidate_windows(stdscr, *windows):
     stdscr.clear()
@@ -1053,12 +1053,6 @@ def main(stdscr):
 
         curses.doupdate()
 
-        #enforicng updates at monotonic intervals
-        interface_refresh += 0.2
-        sleep_time = interface_refresh - time.monotonic()
-        if sleep_time > 0:
-            time.sleep(sleep_time)
-
         if key_press == ord("q"):
             file_path.close_all
             for file in cpu_temp_path:
@@ -1071,6 +1065,12 @@ def main(stdscr):
                     pass
             print("Program was stopped by the user.")
             break
+
+        #enforicng updates at monotonic intervals
+        interface_refresh += 0.1
+        sleep_time = interface_refresh - time.monotonic()
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
 if __name__ == "__main__":
     curses.wrapper(main)
