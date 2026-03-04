@@ -787,7 +787,7 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
                 else:
                     pMem_value= f"{round(pMem_value * 1.048576)} MB"
 
-                pMem_string= f"{pMem_value:<{process_text_lengths[8] - 1}}"[:process_text_lengths[8]] 
+                pMem_string= f"{pMem_value:<{max(1, process_text_lengths[8] - 1)}}"[:process_text_lengths[8]] 
                 name_string= f" {process_stat_data[PID].name:<{process_text_lengths[9]}}" 
                 #create the process line string
                 final_string= f"{ppid_string}{user_string}{priority_string}{state_string}{process_uptime_string}{threads_string}{cpu_string}{vMem_string}{pMem_string}{name_string}"
