@@ -22,6 +22,44 @@ class NeededFiles:
             f.close()
         self.files.clear()
 
+class ProcessStat:
+
+    __slots__ = (
+        "name",
+        "utime",
+        "stime",
+        "process_time",
+        "num_threads",
+        "vsize",
+        "rss",
+        "starttime",
+        "state",
+        "priority",
+    )
+    #need to offset stat_list by 3
+    def __init__(self, name, stats_list):
+        self.name = name
+        self.state= stats_list[0]
+        self.utime = int(stats_list[11])
+        self.stime = int(stats_list[12])
+        self.process_time = self.utime + self.stime
+        self.num_threads = int(stats_list[17])
+        self.vsize = int(stats_list[20])//1048576
+        self.rss = int(stats_list[21])
+        self.starttime = int(stats_list[19])
+        self.priority= int(stats_list[15])
+
+class ProcessStatus:
+
+    __slots__ = (
+            "PPid",
+            "Uid",
+            "Gid",
+    )
+
+    def __init__(self):
+        pass
+
 def nvidia_gpu_name(gpu_check_disable):
     gpu_handles= None
     if gpu_check_disable is False:
@@ -459,44 +497,6 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
                     network_data["Total"][readings]+= network_data[interface][readings]
 
     return data, network_data, current_time
-
-class ProcessStat:
-
-    __slots__ = (
-        "name",
-        "utime",
-        "stime",
-        "process_time",
-        "num_threads",
-        "vsize",
-        "rss",
-        "starttime",
-        "state",
-        "priority",
-    )
-    #need to offset stat_list by 3
-    def __init__(self, name, stats_list):
-        self.name = name
-        self.state= stats_list[0]
-        self.utime = int(stats_list[11])
-        self.stime = int(stats_list[12])
-        self.process_time = self.utime + self.stime
-        self.num_threads = int(stats_list[17])
-        self.vsize = int(stats_list[20])//1048576
-        self.rss = int(stats_list[21])
-        self.starttime = int(stats_list[19])
-        self.priority= int(stats_list[15])
-
-class ProcessStatus:
-
-    __slots__ = (
-            "PPid",
-            "Uid",
-            "Gid",
-    )
-
-    def __init__(self):
-        pass
 
 def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,prev_time= None, ticks_per_second= None):
     #https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
