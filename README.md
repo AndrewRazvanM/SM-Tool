@@ -15,7 +15,7 @@ Currently implemented:
      - Process load on CPU (htop style calculation)
 - Reads Nvidia graphic card telemetry via NVML (pynvml)
 
-![ReadMeScreenshot](assets/ReadMeScreenshot.png)
+![SM-Tool](assets/ReadMeScreenshot.png)
 
 To be implemented:
 - I/O monitoring
