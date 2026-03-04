@@ -44,8 +44,8 @@ class ProcessStat:
         self.stime = int(stats_list[12])
         self.process_time = self.utime + self.stime
         self.num_threads = int(stats_list[17])
-        self.vsize = int(stats_list[20])//1073741824 #Converts to GiB
-        self.rss = (int(stats_list[21]) * page_size)//1073741824 #converts to bytes then GiB
+        self.vsize = int(stats_list[20])//1048576 #Converts to MiB
+        self.rss = (int(stats_list[21]) * page_size)//1048576 #converts to bytes then MiB
         self.starttime = int(stats_list[19])
         self.priority= int(stats_list[15])
 

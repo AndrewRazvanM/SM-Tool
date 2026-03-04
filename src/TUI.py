@@ -119,21 +119,22 @@ class StaticInterface():
                     prev_PID = PID
 
             ppid_max_length= max(3,len(str(prev_PID)))
-            user_max_length= 13 #len(RunningUnder) + 1 // will need to implement a check for max size; PID example above
+            user_max_length= 15 #len(RunningUnder) + 1 // will need to implement a check for max size; PID example above
             priority_max_length= 10 #len(Priority) + 2 (space between text)
             state_max_length= 4 #len(ST) + 2
             total_time_max_length= 9 #len(up-time) +2
             threads_max_length= 9 #len(Threads) + 2
             cpu_max_length= 6 #len(100.0) + 2
-            vMem_max_length= 10 #len(99999 MB) + 2 
-            pMem_max_length= 8 #len(999 MB) + 2 // currently doesn't convert to MB
-            process_text_lengths= (ppid_max_length, user_max_length, priority_max_length, state_max_length, total_time_max_length, threads_max_length, cpu_max_length, vMem_max_length, pMem_max_length)
+            vMem_max_length= 15 #len(1073741824 MB) + 2 
+            pMem_max_length= 15 #len(1073741824 MB) + 2 // currently doesn't convert to MB
+            name_adjustment= 6
+            process_text_lengths= (ppid_max_length, user_max_length, priority_max_length, state_max_length, total_time_max_length, threads_max_length, cpu_max_length, vMem_max_length, pMem_max_length, name_adjustment)
             #buid the static interface as a single line
-            line= f"{"PID":<{ppid_max_length}}{"PPID":>{ppid_max_length}}{"RunningUnder":>{user_max_length}}{"Priority":>{priority_max_length}}{"ST":>{state_max_length}}{"Up-Time":>{total_time_max_length}}{"Threads":>{threads_max_length}}{"CPU%":>{cpu_max_length}}{"VMem":>{vMem_max_length}}{"RSS":>{pMem_max_length}}{"Name":>6}{" ":>{proc_win_columns}}"
+            line= f"{"PID":<{ppid_max_length}}{"PPID":<{ppid_max_length}}{"RunningUnder":<{user_max_length}}{"Priority":<{priority_max_length}}{"ST":<{state_max_length}}{"Up-Time":<{total_time_max_length}}{"Threads":<{threads_max_length}}{"CPU%":<{cpu_max_length}}{"VirtMemory":<{vMem_max_length}}{"Memory":<{pMem_max_length}}{"Name":<{name_adjustment}}{" ":>{proc_win_columns}}"
             process_window.addnstr(0,0, f"{line}", proc_win_columns, curses.color_pair(green_text) | curses.A_REVERSE)
 
         else:
-            process_text_lengths= (0,0,0,0,0,0,0,0,0)
+            process_text_lengths= (0,0,0,0,0,0,0,0,0,0)
 
         process_window.noutrefresh()
         
@@ -754,18 +755,10 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
                 PID, cpu_load = tuplet
                 #create the strings 
                 pid_string= f"{PID:<{max_pid_width}}"
-                if PID in process_status_data:
-                    ppid_string= f"{process_status_data[PID].PPid:<{max_pid_width}}"
-                else:
-                    ppid_string= f"{"N/A":<{max_pid_width}}"
-
-                if PID in process_status_data:
-                    user_string= f"{process_username_list[process_status_data[PID].Uid]:<{process_text_lengths[1]}}"[:process_text_lengths[1]] #coverts the UID to username
-                else:
-                    user_string= f"{"...":<{process_text_lengths[1]}}"[:process_text_lengths[1]]
-
-                priority_string= f" {process_stat_data[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
-                state_string= f" {process_stat_data[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
+                ppid_string= f"{process_status_data[PID].PPid:<{max_pid_width}}"
+                user_string= f" {process_username_list[process_status_data[PID].Uid]:<{process_text_lengths[1]}}"[:process_text_lengths[1]] #coverts the UID to username
+                priority_string= f"  {process_stat_data[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
+                state_string= f"{process_stat_data[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
 
                 process_uptime_seconds= (process_stat_data[PID].process_time/ticks_per_second) #coverts the process time to seconds
                 if process_uptime_seconds >60:
@@ -773,14 +766,26 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
                 else:
                     process_uptime_values= f"{process_uptime_seconds} S" #makes it into a string and keeps it as seconds
 
-                process_uptime_string= f" {process_uptime_values:<{process_text_lengths[4]}}"[:process_text_lengths[4]]
-                threads_string= f" {process_stat_data[PID].num_threads:<{process_text_lengths[5]}}"[:process_text_lengths[5]]
-                cpu_string= f"{cpu_load:>{process_text_lengths[6]}}"[:process_text_lengths[6]]
-                vMem_value= f"{process_stat_data[PID].vsize}"[:process_text_lengths[7] - 4] #leaves an extra space from the previous column
-                vMem_value= f"{vMem_value} GB"
-                vMem_string= f"{vMem_value:>{process_text_lengths[7]}}"[:process_text_lengths[7]]
-                pMem_string= f"{process_stat_data[PID].rss:>{process_text_lengths[8]}}"[:process_text_lengths[8]] 
-                name_string= f" {process_stat_data[PID].name:<{max_text_width}}" 
+                process_uptime_string= f"{process_uptime_values:<{process_text_lengths[4]}}"[:process_text_lengths[4]]
+                threads_string= f"{process_stat_data[PID].num_threads:<{process_text_lengths[5]}}"[:process_text_lengths[5]]
+                cpu_string= f"{cpu_load:<{process_text_lengths[6]}}"[:process_text_lengths[6]]
+
+                vMem_value= process_stat_data[PID].vsize
+                if vMem_value > 1024: 
+                    vMem_value= f"{round((vMem_value//1024) * 1.048576)} GB" #converts from GiB to GB
+                else:
+                    vMem_value= f"{round(vMem_value * 1.048576)} MB"
+
+                vMem_string= f"{vMem_value:<{process_text_lengths[7]}}"[:process_text_lengths[7]]
+
+                pMem_value= process_stat_data[PID].rss
+                if process_stat_data[PID].rss > 1024:
+                    pMem_value= f"{round((pMem_value//1024) * 1.048576)} GB" #converts from GiB to GB
+                else:
+                    pMem_value= f"{round(pMem_value * 1.048576)} MB"
+
+                pMem_string= f"{pMem_value:<{process_text_lengths[8] - 1}}"[:process_text_lengths[8]] 
+                name_string= f" {process_stat_data[PID].name:<{process_text_lengths[9]}}" 
                 #create the process line string
                 final_string= f"{ppid_string}{user_string}{priority_string}{state_string}{process_uptime_string}{threads_string}{cpu_string}{vMem_string}{pMem_string}{name_string}"
 
@@ -797,7 +802,7 @@ def process_dashboard_content_scrollable_layout (content,  max_pid_width, max_te
 
     for i, (pid_string, string) in enumerate(content): 
         padded_content_list.append((pid_string, max_pid_width, (False, 0, 0), PID_string_attr, 0 + i, 0)) #The tuplet == text, text_max_length (is_bar, bar_length, bar_max), attribute, y, x
-        padded_content_list.append((string, max_text_width, (False, 0, 0), process_string_attr, 0 + i, max_pid_width + 1))
+        padded_content_list.append((string, max_text_width, (False, 0, 0), process_string_attr, 0 + i, max_pid_width))
 
     return padded_content_list
 
@@ -924,10 +929,11 @@ def main(stdscr):
     #for process reads
     data_length= 1000 #max number of processes read - will make this changeable by the user in the interface
     next_process_scan= 0 #to decouple process reads from interface
-    process_text_lengths= (0,0,0,0,0,0,0,0,0)
+    process_text_lengths= (0,0,0,0,0,0,0,0,0,0)
     process_stat_data= None
     prev_time= None
     ticks_per_second= None
+    page_size= None
     cpu_temp_path= None #for cpu temp reads
     cpu_load_raw_data= None #for cpu load reads
     network_raw_data= None #for network traffic reads
@@ -988,7 +994,7 @@ def main(stdscr):
 
         process_content_refresh= False #decouples content list building from TUI refresh
         if data_collection > next_process_scan:
-            process_stat_data, process_status_data, process_cpu_load_data, prev_time, ticks_per_second= current_processes(process_stat_data, data_length, prev_time, ticks_per_second)
+            process_stat_data, process_status_data, process_cpu_load_data, prev_time, ticks_per_second, page_size= current_processes(process_stat_data, data_length, prev_time, ticks_per_second, page_size)
             next_process_scan= data_collection + 2
             process_content_refresh= True
 
