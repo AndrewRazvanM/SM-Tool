@@ -229,16 +229,102 @@ class GpuDashboard():
         self.view.render()
 
 class ProcessDashboard():
-    def __init__(self, win):
-        self.view= ContentDiff(win)
 
-    def update(self, process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_window_lines, process_content_refresh, ticks_per_second, scroll_pos):
-        state, max_string_size, max_pid_width= processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_content_refresh, ticks_per_second)
-        self.view.current_lines= process_dashboard_content_scrollable_layout (state, scroll_pos, process_window_lines,  max_pid_width, max_string_size)
+    def __init__(self, height, width, pad_start_y, pad_start_x):
+        # Visible window size (NOT pad size)
+        self.height = height - 2 #For header and end of stdscr 
+        self.width = width - 1 
+
+        # Screen coordinates where the pad will be displayed
+        self.y = pad_start_y
+        self.x = pad_start_x
+
+        # Scrolling state
+        self.scroll_pos = 0
+
+        # Pad state
+        self.pad = None
+        self.total_rows = 0  # total rows inside the pad
+
+    def rebuild_pad(self, process_window_content):
+        """
+        Rebuilds the entire pad using full process content.
+        Should only be called when process data refreshes (every 2s).
+        """
+
+        # Total rows equals number of lines in content
+        self.total_rows = max(2, len(process_window_content))
+
+        # Create pad large enough to hold ALL rows
+        normal_text= 4 #white fgd - black bkgd
+        self.pad = curses.newpad(self.total_rows, self.width)
+        self.pad.bkgd(" ", curses.color_pair(normal_text))
+
+        # Fill pad
+        for _, line in enumerate(process_window_content):
+            text, text_max_length, _, attribute, y, x = line
+
+            try:
+                if attribute is None:
+                    self.pad.addnstr(y, x, text, text_max_length - 1)
+                else:
+                    self.pad.addnstr(y, x, text, text_max_length - 1, attribute)
+            except curses.error:
+                # Ignore drawing errors caused by edge clipping
+                pass
+
+        self._clamp_scroll()
+
+    def _clamp_scroll(self):
+        """
+        Ensures scroll_pos is always within legal bounds.
+        """
+        max_scroll = max(0, self.total_rows - self.height)
+
+        if self.scroll_pos > max_scroll:
+            self.scroll_pos = max_scroll
+        if self.scroll_pos < 0:
+            self.scroll_pos = 0
 
     def render(self):
-        self.view.render()
+        """
+        Displays the visible portion of the pad onto the screen.
+        Called every UI refresh.
+        """
 
+        if self.pad is None:
+            return
+
+        self._clamp_scroll()
+
+        lower_y = self.y + self.height - 1
+        lower_x = self.x + self.width - 1
+
+        try:
+            self.pad.noutrefresh(
+                self.scroll_pos,  # pad row start
+                0,                # pad column start
+                self.y,           # screen top-left y
+                self.x,           # screen top-left x
+                lower_y,          # screen bottom-right y
+                lower_x           # screen bottom-right x
+            )
+        except curses.error:
+            # Prevent crash if resize happens mid-refresh
+            pass
+
+    def scroll_input(self, key):
+        """
+        Handles arrow key scrolling.
+        """
+
+        if key == curses.KEY_DOWN:
+            if self.scroll_pos < self.total_rows - self.height:
+                self.scroll_pos += 1
+
+        elif key == curses.KEY_UP:
+            if self.scroll_pos > 0:
+                self.scroll_pos -= 1
 
 def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3, green_text=5, yellow_text= 6, red_text= 7):
         #perssure state
@@ -655,14 +741,13 @@ def cpu_load_layout(cpu_load_state_total, cpu_load_state):
         lines.append((i[2], i[7], (False, 0, 0), i[3], i[4], i[5] + i[6])) #Represents the part of the bar with text that is not colored
     return lines
 
-def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_content_refresh, ticks_per_second):
+def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, ticks_per_second):
     process_window_content= []
     max_text_width= 0
     max_pid_width= 3
     if process_cpu_load_data != {}:
-        if process_content_refresh is True: #decouples content list building from TUI refresh. Build content list only when new list is generated
             max_pid_width= process_text_lengths[0]
-            max_text_width= (process_window_columns- max_pid_width - 1)
+            max_text_width= max(0, (process_window_columns- max_pid_width - 1))
             sorted_processes= sorted(process_cpu_load_data.items(), key= lambda item:item[1], reverse= True)
 
             for i, tuplet in enumerate(sorted_processes):
@@ -670,9 +755,9 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
                 #create the strings 
                 pid_string= f"{PID:<{max_pid_width}}"
                 if PID in process_status_data:
-                    ppid_string= f"{process_status_data[PID].PPid:<{process_text_lengths[0]}}"
+                    ppid_string= f"{process_status_data[PID].PPid:<{max_pid_width}}"
                 else:
-                    ppid_string= f"{"N/A":<{process_text_lengths[0]}}"
+                    ppid_string= f"{"N/A":<{max_pid_width}}"
 
                 user_string= f"{" ":<{process_text_lengths[1]}}"[:process_text_lengths[1]] #to implement user string later
                 priority_string= f" {process_stat_data[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
@@ -692,24 +777,23 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
                 vMem_string= f"{vMem_value:>{process_text_lengths[7]}}"[:process_text_lengths[7]]
                 pMem_string= f"{process_stat_data[PID].rss:>{process_text_lengths[8]}}"[:process_text_lengths[8]] 
                 name_string= f" {process_stat_data[PID].name:<{max_text_width}}" 
-                #crate the process line
+                #create the process line string
                 final_string= f"{ppid_string}{user_string}{priority_string}{state_string}{process_uptime_string}{threads_string}{cpu_string}{vMem_string}{pMem_string}{name_string}"
 
                 process_window_content.append((pid_string, final_string))
             
     return process_window_content, max_text_width, max_pid_width
 
-def process_dashboard_content_scrollable_layout (content, scroll_pos, window_nr_lines,  max_pid_width, max_text_width):
+def process_dashboard_content_scrollable_layout (content,  max_pid_width, max_text_width):
     white_green= 8
     PID_string_attr= curses.color_pair(white_green) | curses.A_BOLD
     process_string_attr= None
     #first line is reserved for the static interface
-    visible_content= content[scroll_pos:scroll_pos + window_nr_lines- 1]
     visible_content_string_list= []
 
-    for i, (pid_string, string) in enumerate(visible_content): 
-        visible_content_string_list.append((pid_string, max_pid_width, (False, 0, 0), PID_string_attr, 1 + i, 0)) #The tuplet == text, text_max_length (is_bar, bar_length, bar_max), attribute, y, x
-        visible_content_string_list.append((string, max_text_width, (False, 0, 0), process_string_attr, 1 + i, max_pid_width + 1))
+    for i, (pid_string, string) in enumerate(content): 
+        visible_content_string_list.append((pid_string, max_pid_width, (False, 0, 0), PID_string_attr, 0 + i, 0)) #The tuplet == text, text_max_length (is_bar, bar_length, bar_max), attribute, y, x
+        visible_content_string_list.append((string, max_text_width, (False, 0, 0), process_string_attr, 0 + i, max_pid_width + 1))
 
     return visible_content_string_list
 
@@ -743,10 +827,12 @@ def generate_windows(stdscr):
 
     #processes window layout
     if columns >105 and lines > max(12, cpu_load_window_h+2):
-        process_h, process_w= (lines-cpu_load_window_h), (columns-cpu_w)
+        process_h, process_w= (lines - cpu_load_window_h), (columns - cpu_w)
         process_window= curses.newwin(process_h, process_w, cpu_load_window_h + 1, cpu_w+1)
+        process_window_positions= (process_h, process_w, cpu_load_window_h + 1, cpu_w + 1)
     else:
         process_window= None
+        process_window_positions= (0,0,0,0)
 
     cpu_window = curses.newwin(cpu_h, cpu_w, start_y, start_x)
     memory_window = curses.newwin(mem_h, mem_w, start_y + cpu_h, start_x)
@@ -770,7 +856,7 @@ def generate_windows(stdscr):
         process_window.bkgd(" ", curses.color_pair(normal_text))
         process_window.clear()
         
-    return cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window
+    return cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window, process_window_positions
 
 def main(stdscr):
     #open static files
@@ -794,11 +880,6 @@ def main(stdscr):
 
     if cpu_sensor_path == "N/A":
         cpu_check_disable= True
-  
-    stdscr.clear()
-    curses.curs_set(0)
-    stdscr.keypad(True)
-    stdscr.nodelay(True)
 
     #for status bars colors
     status_bar_ok= 1
@@ -810,7 +891,8 @@ def main(stdscr):
     yellow_text= 6
     red_text= 7
     white_green= 8 #foreground - background
-            
+    
+    stdscr.clear()
     curses.curs_set(0) #set cursor to invisible
     stdscr.keypad(True)
     stdscr.nodelay(True)
@@ -838,7 +920,7 @@ def main(stdscr):
     data_length= 1000 #max number of processes read - will make this changeable by the user in the interface
     next_process_scan= 0 #to decouple process reads from interface
     status_index= 0
-    scroll_pos= 0
+    process_text_lengths= (0,0,0,0,0,0,0,0,0)
     process_stat_data= None
     prev_time= None
     ticks_per_second= None
@@ -854,11 +936,12 @@ def main(stdscr):
         #redraws content windows on resize
         if key_press == curses.KEY_RESIZE:
             invalidate_windows(stdscr, cpu_window, memory_window, network_window, gpu_window,cpu_load_window, process_window)
-            cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window= generate_windows(stdscr)
+            cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window, process_window_positions= generate_windows(stdscr)
             gpu_dashboard= GpuDashboard(gpu_window)
             cpu_dashboard= CpuDashboard(cpu_window)
             memory_dashboard= MemoryDashboard(memory_window)
             network_dashboard= NetworkDashboard(network_window)
+            process_dashboard= ProcessDashboard(process_window_positions[0], process_window_positions[1], process_window_positions[2] + 1, process_window_positions[3])
 
             #write the static interface
             static_ui.global_win(stdscr)
@@ -878,9 +961,7 @@ def main(stdscr):
                 cpu_load_window_ratio= 1
             
             if process_window is not None:
-                process_window_lines, process_window_columns = process_window.getmaxyx()
-                process_text_lengths= static_ui.processes(process_window, process_stat_data, process_window_columns)
-                process_dashboard= ProcessDashboard(process_window)
+                process_text_lengths= static_ui.processes(process_window, process_stat_data, process_window_positions[1])
 
         #collect readings - decoupled them from the interface refresh
         if data_collection > next_temp_net_read:
@@ -909,12 +990,14 @@ def main(stdscr):
 
         #initialize the interface on start-up
         if initial_read is True:
-            cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window= generate_windows(stdscr)
+            cpu_window, memory_window, network_window, gpu_window, cpu_load_window, process_window, process_window_positions= generate_windows(stdscr)
             gpu_dashboard= GpuDashboard(gpu_window)
             cpu_dashboard= CpuDashboard(cpu_window)
             memory_dashboard= MemoryDashboard(memory_window)
             network_dashboard= NetworkDashboard(network_window)
+            process_dashboard= ProcessDashboard(process_window_positions[0], process_window_positions[1], process_window_positions[2] + 1, process_window_positions[3])
             initial_read= False
+
             #write the static interface
             static_ui.global_win(stdscr)
             static_ui.cpu(cpu_window, cpu_sensor, cpu_name, cpu_temp_data, cpu_load_raw_data)
@@ -933,10 +1016,8 @@ def main(stdscr):
                 cpu_load_window_ratio= 1
 
             if process_window is not None:
-                process_window_lines, process_window_columns = process_window.getmaxyx()
-                process_text_lengths= static_ui.processes(process_window, process_stat_data, process_window_columns)
-                process_dashboard= ProcessDashboard(process_window)
-
+                process_text_lengths= static_ui.processes(process_window, process_stat_data, process_window_positions[1])
+               
         #CPU Dashboard dinamic content
         cpu_dashboard.update(cpu_temp_data, cpu_pressure_data, cpu_sensor_path)
         cpu_dashboard.render()
@@ -955,19 +1036,20 @@ def main(stdscr):
             cpu_load_dashboard.render()
 
         #Processes Dashboard dinamic content
-        if key_press == curses.KEY_DOWN:
-            scroll_pos = min(scroll_pos + 1, len(process_stat_data) - (process_window_lines - 1))
-        elif key_press == curses.KEY_UP:
-            scroll_pos = max(scroll_pos - 1, 0)
+
+        if process_content_refresh is True:
+            processes_state, max_text_width, max_pid_width= processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_positions[1], ticks_per_second)
+            process_window_content= process_dashboard_content_scrollable_layout (processes_state,  max_pid_width, max_text_width)
+            if process_window is not None:
+                process_dashboard.rebuild_pad(process_window_content)
 
         if process_window is not None:
-            process_dashboard.update(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, process_window_lines, process_content_refresh, ticks_per_second, scroll_pos)
+            process_dashboard.scroll_input(key_press)
             process_dashboard.render()
 
         #GPU Dashboard dinamic content
-        if process_content_refresh or key_press in (curses.KEY_UP, curses.KEY_DOWN):
-            gpu_dashboard.update(gpu_data, gpu_check_disable)
-            gpu_dashboard.render()
+        gpu_dashboard.update(gpu_data, gpu_check_disable)
+        gpu_dashboard.render()
 
         curses.doupdate()
 
