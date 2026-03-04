@@ -54,7 +54,6 @@ class ProcessStatus:
     __slots__ = (
             "PPid",
             "Uid",
-            "Gid",
     )
 
     def __init__(self):
@@ -552,12 +551,14 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
 
     process_cpu_load= {}
     data_length_index=0
-    if status_index == 2:
+
+    if status_index == 0:
         status_scan= True
-        status_index= 0
+        status_index= 2
     else:
         status_scan= False
-        status_index+= 1
+        status_index-= 1
+
 
     for proc_folder_path in os.scandir(path):
         if not proc_folder_path.name.isdigit():
@@ -593,7 +594,11 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
                             key, value= line.split(":", 1)
                             key= key.strip()
                             if key in ProcessStatus.__slots__:
-                                setattr(proc_status, key, value.strip())
+                                if key == "Uid":
+                                    uid, _= value.split(None, 1)
+                                    setattr(proc_status, key, uid)
+                                else:
+                                    setattr(proc_status, key, value.strip())
                             
                         status_data[PID]= proc_status
 
@@ -601,6 +606,7 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
                     #handles exception for new processes that are killed while I'm reading them
                     try:
                         del status_data[PID]
+                        del stat_data[PID]
                     except:
                         continue
     
@@ -624,8 +630,8 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
 
 
 # def main():
-#     username_data, current_user_data= get_username()
-#     print(current_user_data)
+#     stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second= current_processes()
+#     print(status_index)
 
 # if __name__ == "__main__":
 #      raise SystemExit(main())
