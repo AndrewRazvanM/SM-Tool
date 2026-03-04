@@ -37,15 +37,15 @@ class ProcessStat:
         "priority",
     )
     #need to offset stat_list by 3
-    def __init__(self, name, stats_list):
+    def __init__(self, name, stats_list, page_size):
         self.name = name
         self.state= stats_list[0]
         self.utime = int(stats_list[11])
         self.stime = int(stats_list[12])
         self.process_time = self.utime + self.stime
         self.num_threads = int(stats_list[17])
-        self.vsize = int(stats_list[20])//1048576
-        self.rss = int(stats_list[21])
+        self.vsize = int(stats_list[20])//1073741824 #Converts to GiB
+        self.rss = (int(stats_list[21]) * page_size)//1073741824 #converts to bytes then GiB
         self.starttime = int(stats_list[19])
         self.priority= int(stats_list[15])
 
@@ -534,7 +534,7 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
 
     return data, network_data, current_time
 
-def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, ticks_per_second= None):
+def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, ticks_per_second= None, page_size= None):
     #https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
     if ticks_per_second is None:
         ticks_per_second = os.sysconf(os.sysconf_names["SC_CLK_TCK"]) #used for process load calculation
@@ -544,6 +544,9 @@ def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, 
         time_delta= current_time - prev_time
     else:
         time_delta= -1
+
+    if page_size is None:
+        page_size = os.sysconf("SC_PAGE_SIZE")
 
     path= "/proc"
     stat_data = {} #process info and cpu load
@@ -566,7 +569,7 @@ def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, 
                     _, _, rest = line.partition("(")
                     name, _, stats = rest.partition(")")
                     stats_list= stats.split()
-                    process= ProcessStat(name,stats_list)
+                    process= ProcessStat(name,stats_list, page_size)
                     stat_data[PID]= process
 
             except FileNotFoundError:
@@ -617,7 +620,7 @@ def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, 
                 cpu_load_percetange= round((process_time_delta_sec / time_delta)* 100, 1) #normalizez based on the number of threads
                 process_cpu_load[PID]= cpu_load_percetange
 
-    return stat_data, status_data, process_cpu_load, current_time, ticks_per_second
+    return stat_data, status_data, process_cpu_load, current_time, ticks_per_second, page_size
 
 
 # def main():
