@@ -91,7 +91,10 @@ class StaticInterface():
             box_row_index= 1
             box_column_index= 1
             cpu_index_lines= 4
-            cpu_index_columns= 0        
+            cpu_index_columns= 0
+
+            cpu_load_window.addch(1, 0, "[")
+            cpu_load_window.addch(1, min(101, cpu_window_columns - 1), "]")    
             #per core load
             for _ in range(len(cpu_load_raw_data)-1):
                 if box_row_index > boxes_per_columns:
