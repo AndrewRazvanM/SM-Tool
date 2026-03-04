@@ -70,7 +70,7 @@ class SystemUsername:
     def __init__ (self, line):
         self.name, _, self.UID, _= line.strip().split(":", 3)
 
-def get_username():
+def get_process_username():
 
     path= "/etc/passwd"
     current_user_path= "/var/run/user"
@@ -623,9 +623,9 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
     return stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second
 
 
-def main():
-    username_data, current_user_data= get_username()
-    print(current_user_data)
+# def main():
+#     username_data, current_user_data= get_username()
+#     print(current_user_data)
 
-if __name__ == "__main__":
-     raise SystemExit(main())
+# if __name__ == "__main__":
+#      raise SystemExit(main())
