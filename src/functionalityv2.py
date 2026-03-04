@@ -534,7 +534,7 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
 
     return data, network_data, current_time
 
-def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,prev_time= None, ticks_per_second= None):
+def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, ticks_per_second= None):
     #https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
     if ticks_per_second is None:
         ticks_per_second = os.sysconf(os.sysconf_names["SC_CLK_TCK"]) #used for process load calculation
@@ -551,14 +551,6 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
 
     process_cpu_load= {}
     data_length_index=0
-
-    if status_index == 0:
-        status_scan= True
-        status_index= 2
-    else:
-        status_scan= False
-        status_index-= 1
-
 
     for proc_folder_path in os.scandir(path):
         if not proc_folder_path.name.isdigit():
@@ -584,31 +576,30 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
                 except:
                     continue
 
-            #does the calculation only once every 2 times
-            if status_scan is True:
-                status_file= f"{path}/{PID}/status"
-                proc_status= ProcessStatus()
-                try:
-                    with open(status_file) as f:
-                        for line in f:
-                            key, value= line.split(":", 1)
-                            key= key.strip()
-                            if key in ProcessStatus.__slots__:
-                                if key == "Uid":
-                                    uid, _= value.split(None, 1)
-                                    setattr(proc_status, key, uid)
-                                else:
-                                    setattr(proc_status, key, value.strip())
-                            
-                        status_data[PID]= proc_status
+        status_file= f"{path}/{PID}/status"
+        proc_status= ProcessStatus()
+        try:
+            with open(status_file) as f:
+                for line in f:
+                    key, value= line.split(":", 1)
+                    key= key.strip()
+                    if key in ProcessStatus.__slots__:
+                        if key == "Uid":
+                            uid, _= value.split(None, 1)
+                            setattr(proc_status, key, uid)
+                        else:
+                            setattr(proc_status, key, value.strip())
+                                
+                            status_data[PID]= proc_status
 
-                except FileNotFoundError:
-                    #handles exception for new processes that are killed while I'm reading them
-                    try:
-                        del status_data[PID]
-                        del stat_data[PID]
-                    except:
-                        continue
+        except FileNotFoundError:
+        #handles exception for new processes that are killed while I'm reading them
+            try:
+                del status_data[PID]
+                del stat_data[PID]
+
+            except:
+                pass
     
     if (prev_stat_data is not None) and (time_delta > 0):
         common_pids = prev_stat_data.keys() & stat_data.keys()
@@ -626,12 +617,12 @@ def current_processes(prev_stat_data= None, data_length= 300, status_index= 0,pr
                 cpu_load_percetange= round((process_time_delta_sec / time_delta)* 100, 1) #normalizez based on the number of threads
                 process_cpu_load[PID]= cpu_load_percetange
 
-    return stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second
+    return stat_data, status_data, process_cpu_load, current_time, ticks_per_second
 
 
 # def main():
 #     stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second= current_processes()
-#     print(status_index)
+#     print(status_data[4157].Uid)
 
 # if __name__ == "__main__":
 #      raise SystemExit(main())

@@ -741,7 +741,7 @@ def cpu_load_layout(cpu_load_state_total, cpu_load_state):
         lines.append((i[2], i[7], (False, 0, 0), i[3], i[4], i[5] + i[6])) #Represents the part of the bar with text that is not colored
     return lines
 
-def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, ticks_per_second):
+def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, ticks_per_second, process_username_list):
     process_window_content= []
     max_text_width= 0
     max_pid_width= 3
@@ -759,7 +759,11 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
                 else:
                     ppid_string= f"{"N/A":<{max_pid_width}}"
 
-                user_string= f"{" ":<{process_text_lengths[1]}}"[:process_text_lengths[1]] #to implement user string later
+                if PID in process_status_data:
+                    user_string= f"{process_username_list[process_status_data[PID].Uid]:<{process_text_lengths[1]}}"[:process_text_lengths[1]] #coverts the UID to username
+                else:
+                    user_string= f"{"...":<{process_text_lengths[1]}}"[:process_text_lengths[1]]
+
                 priority_string= f" {process_stat_data[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
                 state_string= f" {process_stat_data[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
 
@@ -877,6 +881,7 @@ def main(stdscr):
     cpu_sensor, cpu_sensor_path= probe_cpu_sensors(cpu_check_disable) #check for available temp sensor and cache the path
     cpu_name= get_cpu_name(cpu_check_disable) #check for the CPU name and cache it
     gpu_name, gpu_handles= nvidia_gpu_name(gpu_check_disable) #check for the GPU name and cache it
+    process_username_list, current_user= get_process_username()
 
     if cpu_sensor_path == "N/A":
         cpu_check_disable= True
@@ -919,7 +924,6 @@ def main(stdscr):
     #for process reads
     data_length= 1000 #max number of processes read - will make this changeable by the user in the interface
     next_process_scan= 0 #to decouple process reads from interface
-    status_index= 0
     process_text_lengths= (0,0,0,0,0,0,0,0,0)
     process_stat_data= None
     prev_time= None
@@ -984,7 +988,7 @@ def main(stdscr):
 
         process_content_refresh= False #decouples content list building from TUI refresh
         if data_collection > next_process_scan:
-            process_stat_data, process_status_data, process_cpu_load_data, status_index, prev_time, ticks_per_second= current_processes(process_stat_data, data_length, status_index, prev_time, ticks_per_second)
+            process_stat_data, process_status_data, process_cpu_load_data, prev_time, ticks_per_second= current_processes(process_stat_data, data_length, prev_time, ticks_per_second)
             next_process_scan= data_collection + 2
             process_content_refresh= True
 
@@ -1038,7 +1042,7 @@ def main(stdscr):
         #Processes Dashboard dinamic content
 
         if process_content_refresh is True:
-            processes_state, max_text_width, max_pid_width= processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_positions[1], ticks_per_second)
+            processes_state, max_text_width, max_pid_width= processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_positions[1], ticks_per_second, process_username_list)
             process_window_content= process_dashboard_content_scrollable_layout (processes_state,  max_pid_width, max_text_width)
             if process_window is not None:
                 process_dashboard.rebuild_pad(process_window_content)
