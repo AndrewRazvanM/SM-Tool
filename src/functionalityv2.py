@@ -414,7 +414,7 @@ def get_cpu_load(cpu_check_disable, file_path, previous_data= None):
                             else:
                                 data[identifier][values[i-1]]= int(split[i].strip())
                     else:
-                        continue
+                        break
 
         except (RuntimeError, UnboundLocalError, FileNotFoundError):
             load_usage={
@@ -556,53 +556,56 @@ def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, 
     data_length_index=0
 
     for proc_folder_path in os.scandir(path):
-        if not proc_folder_path.name.isdigit():
-            continue  
-
-        PID= int(proc_folder_path.name)
         if data_length_index < data_length:
             data_length_index+= 1
-            stat_file= f"{path}/{PID}/stat"
+            pid_proc_path= proc_folder_path.path
+            pid_proc_string= proc_folder_path.name
+            if not pid_proc_string.isdigit():
+                continue  
+
+            PID= int(pid_proc_string)
+            stat_file= pid_proc_path + "/stat"
             try:
                 with open(stat_file) as f:
                     line= f.readline()
                     _, _, rest = line.partition("(")
                     name, _, stats = rest.partition(")")
-                    stats_list= stats.split()
+                    stats_list= stats.split(None, 22)
                     process= ProcessStat(name,stats_list, page_size)
                     stat_data[PID]= process
 
             except FileNotFoundError:
                 #handles exception for new processes that are killed while I'm reading them
-                try:
-                    del stat_data[PID]
-                except:
                     continue
 
-        status_file= f"{path}/{PID}/status"
-        proc_status= ProcessStatus()
-        try:
-            with open(status_file) as f:
-                for line in f:
-                    key, value= line.split(":", 1)
-                    key= key.strip()
-                    if key in ProcessStatus.__slots__:
-                        if key == "Uid":
-                            uid, _= value.split(None, 1)
-                            setattr(proc_status, key, uid)
-                        else:
-                            setattr(proc_status, key, value.strip())
-                                
-                            status_data[PID]= proc_status
-
-        except FileNotFoundError:
-        #handles exception for new processes that are killed while I'm reading them
+            status_file= pid_proc_path + "/status"
+            uid= None
+            ppid= None
             try:
-                del status_data[PID]
-                del stat_data[PID]
+                with open(status_file) as f:
+                    for line in f:
+                        if line.startswith("Uid"):  
+                            uid= line.split()[1]
 
-            except:
-                pass
+                        if line.startswith("PPid"):
+                            ppid= line.split()[1]
+                                    
+                        if uid and ppid:
+                            break
+                    
+                    if uid and ppid:
+                        proc_status= ProcessStatus()
+                        proc_status.Uid= uid.strip()
+                        proc_status.PPid= ppid.strip()
+                        status_data[PID]= proc_status
+
+            except FileNotFoundError:
+            #handles exception for new processes that are killed while I'm reading them
+                continue
+
+        else:
+            break
+            
     
     if (prev_stat_data is not None) and (time_delta > 0):
         common_pids = prev_stat_data.keys() & stat_data.keys()
@@ -622,10 +625,9 @@ def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, 
 
     return stat_data, status_data, process_cpu_load, current_time, ticks_per_second, page_size
 
-
-# def main():
-#     stat_data, status_data, process_cpu_load, status_index, current_time, ticks_per_second= current_processes()
-#     print(status_data[4157].Uid)
+# if __name__ == "__main__": #for profiling functions
+#     for _ in range(10):
+#         processes = current_processes()
 
 # if __name__ == "__main__":
 #      raise SystemExit(main())
