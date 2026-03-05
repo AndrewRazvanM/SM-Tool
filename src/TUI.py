@@ -758,7 +758,7 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
                 PID, cpu_load = tuplet
                 #create the strings 
                 pid_string= f"{PID:<{max_pid_width}}"
-                ppid_string= f"{process_status_data[PID].PPid:<{max_pid_width}}"
+                ppid_string= f"{process_stat_data[PID].ppid:<{max_pid_width}}"
                 user_string= f" {process_username_list[process_status_data[PID].Uid]:<{process_text_lengths[1]}}"[:process_text_lengths[1]] #coverts the UID to username
                 priority_string= f"  {process_stat_data[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
                 state_string= f"{process_stat_data[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
@@ -934,6 +934,7 @@ def main(stdscr):
     next_process_scan= 0 #to decouple process reads from interface
     process_text_lengths= (0,0,0,0,0,0,0,0,0,0)
     process_stat_data= None
+    process_status_data= None
     prev_time= None
     ticks_per_second= None
     page_size= None
@@ -997,7 +998,7 @@ def main(stdscr):
 
         process_content_refresh= False #decouples content list building from TUI refresh
         if data_collection > next_process_scan:
-            process_stat_data, process_status_data, process_cpu_load_data, prev_time, ticks_per_second, page_size= current_processes(process_stat_data, data_length, prev_time, ticks_per_second, page_size)
+            process_stat_data, process_status_data, process_cpu_load_data, prev_time, ticks_per_second, page_size= current_processes(process_stat_data, process_status_data, data_length, prev_time, ticks_per_second, page_size)
             next_process_scan= data_collection + 2
             process_content_refresh= True
 

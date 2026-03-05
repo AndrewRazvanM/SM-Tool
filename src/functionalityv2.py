@@ -26,6 +26,7 @@ class ProcessStat:
 
     __slots__ = (
         "name",
+        "ppid",
         "utime",
         "stime",
         "process_time",
@@ -39,6 +40,7 @@ class ProcessStat:
     #need to offset stat_list by 3
     def __init__(self, name, stats_list, page_size):
         self.name = name
+        self.ppid= stats_list[1]
         self.state= stats_list[0]
         self.utime = int(stats_list[11])
         self.stime = int(stats_list[12])
@@ -52,7 +54,6 @@ class ProcessStat:
 class ProcessStatus:
 
     __slots__ = (
-            "PPid",
             "Uid",
     )
 
@@ -534,7 +535,7 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
 
     return data, network_data, current_time
 
-def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, ticks_per_second= None, page_size= None):
+def current_processes(prev_stat_data= None, status_data= None, data_length= 1000, prev_time= None, ticks_per_second= None, page_size= None):
     #https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
     if ticks_per_second is None:
         ticks_per_second = os.sysconf(os.sysconf_names["SC_CLK_TCK"]) #used for process load calculation
@@ -550,7 +551,8 @@ def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, 
 
     path= "/proc"
     stat_data = {} #process info and cpu load
-    status_data={} #detailed process info and mem consumption
+    if status_data is None:
+        status_data={} #chaching the Uid of user that's running the process
 
     process_cpu_load= {}
     data_length_index=0
@@ -576,32 +578,29 @@ def current_processes(prev_stat_data= None, data_length= 1000, prev_time= None, 
 
             except FileNotFoundError:
                 #handles exception for new processes that are killed while I'm reading them
+                    if PID in status_data:
+                        del status_data[PID]
+
+            if (PID not in status_data) or (prev_stat_data is None) or (stat_data[PID].starttime != prev_stat_data[PID].starttime):
+                status_file= pid_proc_path + "/status"
+                uid= None
+                try:
+                    with open(status_file) as f:
+                        for line in f:
+                            if line.startswith("Uid"):  
+                                uid= line.split()[1]
+                                        
+                            if uid:
+                                break
+                        
+                        if uid:
+                            proc_status= ProcessStatus()
+                            proc_status.Uid= uid.strip()
+                            status_data[PID]= proc_status
+
+                except FileNotFoundError:
+                #handles exception for new processes that are killed while I'm reading them
                     continue
-
-            status_file= pid_proc_path + "/status"
-            uid= None
-            ppid= None
-            try:
-                with open(status_file) as f:
-                    for line in f:
-                        if line.startswith("Uid"):  
-                            uid= line.split()[1]
-
-                        if line.startswith("PPid"):
-                            ppid= line.split()[1]
-                                    
-                        if uid and ppid:
-                            break
-                    
-                    if uid and ppid:
-                        proc_status= ProcessStatus()
-                        proc_status.Uid= uid.strip()
-                        proc_status.PPid= ppid.strip()
-                        status_data[PID]= proc_status
-
-            except FileNotFoundError:
-            #handles exception for new processes that are killed while I'm reading them
-                continue
 
         else:
             break
