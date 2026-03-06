@@ -166,7 +166,6 @@ class ContentDiff:
                     self.win.hline(y, x + filled, text, empty)
 
         self.prev_lines= self.current_lines.copy()
-        self.win.noutrefresh()
 
 class CpuDashboard():
     def __init__(self, win):
@@ -1024,19 +1023,23 @@ def main(stdscr):
         #CPU Dashboard dinamic content
         cpu_dashboard.update(cpu_temp_data, cpu_pressure_data, cpu_sensor_path)
         cpu_dashboard.render()
+        cpu_window.noutrefresh()
 
         #Memory Dashboard dinamic content
         memory_dashboard.update(memory_data, memory_pressure_data)
         memory_dashboard.render()
+        memory_window.noutrefresh()
 
         #Network Dashboard dinamic content
         network_dashboard.update(network_data)
         network_dashboard.render()
+        network_window.noutrefresh()
 
         #CPU Load Dashboard dinamic content
         if cpu_load_window is not None:
             cpu_load_dashboard.update(cpu_load_calc_data, cpu_load_window_ratio, cpu_window_lines, cpu_window_columns)
             cpu_load_dashboard.render()
+            cpu_load_window.noutrefresh()
 
         #Processes Dashboard dinamic content
 
@@ -1047,11 +1050,12 @@ def main(stdscr):
 
         if process_window is not None:
             process_dashboard.scroll_input(key_press)
-            process_dashboard.render()
+            process_dashboard.render() #refresh is done inside the render
 
         #GPU Dashboard dinamic content
         gpu_dashboard.update(gpu_data, gpu_check_disable)
         gpu_dashboard.render()
+        gpu_window.noutrefresh()
 
         curses.doupdate()
 
