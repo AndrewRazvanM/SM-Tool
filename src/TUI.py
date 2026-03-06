@@ -1048,7 +1048,7 @@ def main(stdscr):
 
         #Processes Dashboard dinamic content
 
-        if process_content_refresh is True:
+        if process_content_refresh is True or key_press == curses.KEY_RESIZE:
             processes_state, max_text_width, max_pid_width= processes_dashboard_state(process_monitor, process_text_lengths, process_window_positions[1], ticks_per_second, process_username_list)
             process_window_content= process_dashboard_content_scrollable_layout (processes_state,  max_pid_width, max_text_width)
             if process_window is not None:
