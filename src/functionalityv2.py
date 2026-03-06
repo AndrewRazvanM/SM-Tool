@@ -69,19 +69,21 @@ class ProcessMonitor:
         time_delta= current_time - self.__prev_process_time
         self.__prev_process_time= current_time
         data_length_index= 0
+        current_pids= set() #used to remove old entires in process_list
 
         for proc_folder_path in os.scandir(self.__proc_path):
             if data_length_index < data_length:
                 data_length_index+= 1
             else:
                 break
-
+            
             pid_proc_path= proc_folder_path.path
             pid_proc_string= proc_folder_path.name
             if not pid_proc_string.isdigit():
                     continue  
                 
             PID= int(pid_proc_string)
+            current_pids.add(PID)
             stat_file= pid_proc_path + "/stat"
 
             try:
@@ -104,9 +106,7 @@ class ProcessMonitor:
                         priority= int(stats_list[15])
 
             except FileNotFoundError:
-                #handles exception for new processes that are killed while I'm reading them. Deletes the entry in process_list too
-                    if PID in self.process_list:
-                        del self.process_list[PID]
+                #handles exception for new processes that are killed while I'm reading them. 
                     continue
 
             #scan for process UID only when it's a new process or the process restarted
@@ -123,9 +123,7 @@ class ProcessMonitor:
                                 break
 
                 except FileNotFoundError:
-                #handles exception for new processes that are killed while I'm reading them. Deletes the entry in process_list too
-                    if PID in self.process_list:
-                        del self.process_list[PID]
+                #handles exception for new processes that are killed while I'm reading them.
                     continue
 
                 process = ProcessInfo(name, starttime, uid)
@@ -156,6 +154,10 @@ class ProcessMonitor:
                 process.process_time= process_time
                 if delta >= 0:  # ignore negative deltas due to PID reuse
                     process.cpu_load = round((delta / self.ticks_per_second / time_delta) * 100, 1)
+
+        dead_processes= set(self.process_list.keys()) - current_pids
+        for remove_pid in dead_processes:
+            del self.process_list[remove_pid]
 
 class SystemUsername:
 
