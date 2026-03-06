@@ -5,7 +5,7 @@ import time
 class StaticInterface():
 
     def global_win(self, stdscr):
-        _, columns = stdscr.getmaxyx()
+        lines, columns = stdscr.getmaxyx()
         stdscr.addstr(0, columns // 2 - 11, "System Monitoring Tool", curses.A_BOLD)
         stdscr.noutrefresh()
 
@@ -686,7 +686,7 @@ def cpu_load_state(cpu_load_data, cpu_load_window_ratio, cpu_window_lines, cpu_w
     string_without_color_attr= None
     cpu_index_lines= 4
     cpu_index_columns= 1
-    per_core_bar_ratio= 100//cpu_load_window_ratio # calculates the ratio when at 100% LOAD -> this is the maxiumu possible load
+    per_core_bar_ratio= max(1, 100//cpu_load_window_ratio) # calculates the ratio when at 100% LOAD -> this is the maxiumu possible load
     cpu_load_state= []
     max_cpu_load_bar= cpu_load_window_ratio - 2
 
@@ -760,9 +760,12 @@ def processes_dashboard_state(process_monitor, process_text_lengths, process_win
                 pid_string= f"{PID:<{max_pid_width}}"
                 ppid_string= f"{process_monitor.process_list[PID].ppid:<{max_pid_width}}"
                 user_string= f" {process_username_list[process_monitor.process_list[PID].uid]:<{process_text_lengths[1]}}"[:process_text_lengths[1]] #coverts the UID to username
-                priority_string= f"  {process_monitor.process_list[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
-                state_string= f"{process_monitor.process_list[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
+                if process_monitor.process_list[PID].priority > 0:
+                    priority_string= f"  {process_monitor.process_list[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]] #adds 3 extra spaces for alignment
+                else:
+                    priority_string= f" {process_monitor.process_list[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]] #adds 2 extra spaces for alignment for negative numbers
 
+                state_string= f"{process_monitor.process_list[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
                 process_uptime_seconds= (process_monitor.process_list[PID].process_time/ticks_per_second) #coverts the process time to seconds
                 if process_uptime_seconds >60:
                     process_uptime_values= f"{round(process_uptime_seconds/60,1)} M" #converts the time to minute and makes it a string
@@ -965,7 +968,7 @@ def main(stdscr):
                 cpu_window_lines, cpu_window_columns = cpu_load_window.getmaxyx()
                 displayed_lines= (cpu_window_lines-4)//3
                 columns_needed= max(1, int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines))
-                cpu_load_window_ratio= (cpu_window_columns-2)//columns_needed
+                cpu_load_window_ratio= max(1, (cpu_window_columns-2)//columns_needed)
                 cpu_load_dashboard= CpuLoadDashboard(cpu_load_window)
                 static_ui.cpu_load(cpu_load_window, cpu_load_raw_data, cpu_load_window_ratio)
             else:
@@ -1020,7 +1023,7 @@ def main(stdscr):
                     cpu_window_lines, cpu_window_columns = cpu_load_window.getmaxyx()
                     displayed_lines= (cpu_window_lines-4)//3
                     columns_needed= max(1, int(((len(cpu_load_raw_data)-1) + displayed_lines)/displayed_lines))
-                    cpu_load_window_ratio= (cpu_window_columns-2)//columns_needed
+                    cpu_load_window_ratio= max(1, (cpu_window_columns-2)//columns_needed)
                     cpu_load_dashboard= CpuLoadDashboard(cpu_load_window)
                     static_ui.cpu_load(cpu_load_window, cpu_load_raw_data, cpu_load_window_ratio)
             else:
