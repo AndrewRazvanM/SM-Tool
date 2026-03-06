@@ -115,13 +115,8 @@ class StaticInterface():
 
     def processes(self, process_window, process_list, proc_win_columns, white_green= 8):
         if process_window is not None:
-            
-            prev_PID= 0
-            for PID in process_list:
-                if PID > prev_PID:
-                    prev_PID = PID
 
-            ppid_max_length= max(3,len(str(prev_PID)))
+            ppid_max_length= max(3,len(str(max(process_list))))
             user_max_length= 15 #len(RunningUnder) + 1 // will need to implement a check for max size; PID example above
             priority_max_length= 10 #len(Priority) + 2 (space between text)
             state_max_length= 4 #len(ST) + 2
@@ -248,6 +243,7 @@ class ProcessDashboard():
         self.__pad = curses.newpad(self.__total_rows, self.width)
         normal_text= 4 #white fgd - black bkgd
         self.__pad.bkgd(" ", curses.color_pair(normal_text))
+        self.__view= ContentDiff(self.__pad)
 
     def rebuild_pad_content(self, process_window_content):
         """
@@ -255,17 +251,19 @@ class ProcessDashboard():
         """
 
         # Fill pad
-        for line in process_window_content:
-            text, text_max_length, _, attribute, y, x = line
+        self.__view.current_lines= process_window_content
+        self.__view.render()
+        # for line in process_window_content:
+        #     text, text_max_length, _, attribute, y, x = line
 
-            try:
-                if attribute is None:
-                    self.__pad.addnstr(y, x, text, text_max_length - 1)
-                else:
-                    self.__pad.addnstr(y, x, text, text_max_length - 1, attribute)
-            except curses.error:
-                # Ignore drawing errors caused by edge clipping
-                pass
+        #     try:
+        #         if attribute is None:
+        #             self.__pad.addnstr(y, x, text, text_max_length - 1)
+        #         else:
+        #             self.__pad.addnstr(y, x, text, text_max_length - 1, attribute)
+        #     except curses.error:
+        #         # Ignore drawing errors caused by edge clipping
+        #         pass
 
         self._clamp_scroll()
 
@@ -445,12 +443,12 @@ def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, statu
 
 def cpu_dashboard_layout(pressure_state, cpu_state):
     lines= []
-    (avg10, avg10_attr), (avg60, avg10_attr), (avg300, avg300_attr), (pressure_health_text, pressure_health_attr), (cpu_pressure_bar_length, pressure_bar_attr)= pressure_state
+    (avg10, avg10_attr), (avg60, avg60_attr), (avg300, avg300_attr), (pressure_health_text, pressure_health_attr), (cpu_pressure_bar_length, pressure_bar_attr)= pressure_state
     (cpu_die_temp_text, cpu_die_temp_attr), (cpu_average_temp_text, cpu_average_text_attr), (cpu_die_bar_length, cpu_die_bar_attr), (cpu_average_bar_length, cpu_avgerage_bar_attr)= cpu_state
 
     #build the content, line by line
     lines.append((avg10, 8, (False, 0, 0), avg10_attr, 6, 2)) #this represents the text, text_max_length, (is_bar, bar_length, bar_max), attribute, y, x
-    lines.append((avg60, 8, (False, 0, 0), avg10_attr, 6, 11))
+    lines.append((avg60, 8, (False, 0, 0), avg60_attr, 6, 11))
     lines.append((avg300, 8, (False, 0, 0), avg300_attr, 6, 21))
     lines.append((pressure_health_text, 8, (False, 0, 0), pressure_health_attr, 5, 35))
     lines.append((" ", 8, (True, cpu_pressure_bar_length, 22), pressure_bar_attr, 6, 27)) #22 is the max available width for the bar
