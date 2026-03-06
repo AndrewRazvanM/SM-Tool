@@ -113,7 +113,7 @@ class StaticInterface():
 
             cpu_load_window.noutrefresh()
 
-    def processes(self, process_window, process_list, proc_win_columns, green_text= 5):
+    def processes(self, process_window, process_list, proc_win_columns, white_green= 8):
         if process_window is not None:
             
             prev_PID= 0
@@ -134,7 +134,7 @@ class StaticInterface():
             process_text_lengths= (ppid_max_length, user_max_length, priority_max_length, state_max_length, total_time_max_length, threads_max_length, cpu_max_length, vMem_max_length, pMem_max_length, name_adjustment)
             #buid the static interface as a single line
             line= f"{"PID":<{ppid_max_length}}{"PPID":<{ppid_max_length}}{"RunningUnder":<{user_max_length}}{"Priority":<{priority_max_length}}{"ST":<{state_max_length}}{"Up-Time":<{total_time_max_length}}{"Threads":<{threads_max_length}}{"CPU%":<{cpu_max_length}}{"VirtMemory":<{vMem_max_length}}{"Memory":<{pMem_max_length}}{"Name":<{name_adjustment}}{" ":>{proc_win_columns}}"
-            process_window.addnstr(0,0, f"{line}", proc_win_columns, curses.color_pair(green_text) | curses.A_REVERSE)
+            process_window.addnstr(0,0, f"{line}", proc_win_columns, curses.color_pair(white_green) | curses.A_BOLD)
 
         else:
             process_text_lengths= (0,0,0,0,0,0,0,0,0,0)
@@ -898,9 +898,9 @@ def main(stdscr):
         cpu_check_disable= True
 
     #for status bars colors
-    status_bar_ok= 1
-    status_bar_warning= 2
-    status_bar_critical= 3
+    status_bar_ok= 1 #foreground green - background black
+    status_bar_warning= 2 #foreground  yellow
+    status_bar_critical= 3 #foreground red
     #for text colors
     normal_text= 4
     green_text= 5
