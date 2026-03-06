@@ -113,11 +113,11 @@ class StaticInterface():
 
             cpu_load_window.noutrefresh()
 
-    def processes(self, process_window, process_stat_data, proc_win_columns, green_text= 5):
+    def processes(self, process_window, process_list, proc_win_columns, green_text= 5):
         if process_window is not None:
             
             prev_PID= 0
-            for PID in process_stat_data:
+            for PID in process_list:
                 if PID > prev_PID:
                     prev_PID = PID
 
@@ -745,35 +745,35 @@ def cpu_load_layout(cpu_load_state_total, cpu_load_state):
         lines.append((i[2], i[7], (False, 0, 0), i[3], i[4], i[5] + i[6])) #Represents the part of the bar with text that is not colored
     return lines
 
-def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_columns, ticks_per_second, process_username_list):
+def processes_dashboard_state(process_monitor, process_text_lengths, process_window_columns, ticks_per_second, process_username_list):
     process_window_content= []
     max_text_width= 0
     max_pid_width= 3
-    if process_cpu_load_data != {}:
+    if process_monitor.process_list != {}:
             max_pid_width= process_text_lengths[0]
             max_text_width= max(0, (process_window_columns- max_pid_width - 1))
-            sorted_processes= sorted(process_cpu_load_data.items(), key= lambda item:item[1], reverse= True)
+            sorted_processes= sorted(process_monitor.process_list.items(), key= lambda item:item[1].cpu_load, reverse= True)
 
             for i, tuplet in enumerate(sorted_processes):
-                PID, cpu_load = tuplet
+                PID, _ = tuplet
                 #create the strings 
                 pid_string= f"{PID:<{max_pid_width}}"
-                ppid_string= f"{process_stat_data[PID].ppid:<{max_pid_width}}"
-                user_string= f" {process_username_list[process_status_data[PID].Uid]:<{process_text_lengths[1]}}"[:process_text_lengths[1]] #coverts the UID to username
-                priority_string= f"  {process_stat_data[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
-                state_string= f"{process_stat_data[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
+                ppid_string= f"{process_monitor.process_list[PID].ppid:<{max_pid_width}}"
+                user_string= f" {process_username_list[process_monitor.process_list[PID].uid]:<{process_text_lengths[1]}}"[:process_text_lengths[1]] #coverts the UID to username
+                priority_string= f"  {process_monitor.process_list[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]]
+                state_string= f"{process_monitor.process_list[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
 
-                process_uptime_seconds= (process_stat_data[PID].process_time/ticks_per_second) #coverts the process time to seconds
+                process_uptime_seconds= (process_monitor.process_list[PID].process_time/ticks_per_second) #coverts the process time to seconds
                 if process_uptime_seconds >60:
                     process_uptime_values= f"{round(process_uptime_seconds/60,1)} M" #converts the time to minute and makes it a string
                 else:
                     process_uptime_values= f"{process_uptime_seconds} S" #makes it into a string and keeps it as seconds
 
                 process_uptime_string= f"{process_uptime_values:<{process_text_lengths[4]}}"[:process_text_lengths[4]]
-                threads_string= f"{process_stat_data[PID].num_threads:<{process_text_lengths[5]}}"[:process_text_lengths[5]]
-                cpu_string= f"{cpu_load:<{process_text_lengths[6]}}"[:process_text_lengths[6]]
+                threads_string= f"{process_monitor.process_list[PID].num_threads:<{process_text_lengths[5]}}"[:process_text_lengths[5]]
+                cpu_string= f"{process_monitor.process_list[PID].cpu_load:<{max(1,process_text_lengths[6])}}"[:process_text_lengths[6]]
 
-                vMem_value= process_stat_data[PID].vsize
+                vMem_value= process_monitor.process_list[PID].vsize
                 if vMem_value > 1024: 
                     vMem_value= f"{round((vMem_value//1024) * 1.048576)} GB" #converts from GiB to GB
                 else:
@@ -781,14 +781,14 @@ def processes_dashboard_state(process_cpu_load_data, process_stat_data, process_
 
                 vMem_string= f"{vMem_value:<{process_text_lengths[7]}}"[:process_text_lengths[7]]
 
-                pMem_value= process_stat_data[PID].rss
-                if process_stat_data[PID].rss > 1024:
+                pMem_value= process_monitor.process_list[PID].rss
+                if process_monitor.process_list[PID].rss > 1024:
                     pMem_value= f"{round((pMem_value//1024) * 1.048576)} GB" #converts from GiB to GB
                 else:
                     pMem_value= f"{round(pMem_value * 1.048576)} MB"
 
                 pMem_string= f"{pMem_value:<{max(1, process_text_lengths[8] - 1)}}"[:process_text_lengths[8]] 
-                name_string= f" {process_stat_data[PID].name:<{process_text_lengths[9]}}" 
+                name_string= f" {process_monitor.process_list[PID].name:<{process_text_lengths[9]}}" 
                 #create the process line string
                 final_string= f"{ppid_string}{user_string}{priority_string}{state_string}{process_uptime_string}{threads_string}{cpu_string}{vMem_string}{pMem_string}{name_string}"
 
@@ -932,12 +932,9 @@ def main(stdscr):
     #for process reads
     data_length= 1000 #max number of processes read - will make this changeable by the user in the interface
     next_process_scan= 0 #to decouple process reads from interface
+    process_monitor= ProcessMonitor()
+    ticks_per_second= process_monitor.ticks_per_second
     process_text_lengths= (0,0,0,0,0,0,0,0,0,0)
-    process_stat_data= None
-    process_status_data= None
-    prev_time= None
-    ticks_per_second= None
-    page_size= None
     cpu_temp_path= None #for cpu temp reads
     cpu_load_raw_data= None #for cpu load reads
     network_raw_data= None #for network traffic reads
@@ -975,7 +972,7 @@ def main(stdscr):
                 cpu_load_window_ratio= 1
             
             if process_window is not None:
-                process_text_lengths= static_ui.processes(process_window, process_stat_data, process_window_positions[1])
+                process_text_lengths= static_ui.processes(process_window, process_monitor.process_list, process_window_positions[1])
 
         #collect readings - decoupled them from the interface refresh
         if data_collection > next_temp_net_read:
@@ -998,7 +995,7 @@ def main(stdscr):
 
         process_content_refresh= False #decouples content list building from TUI refresh
         if data_collection > next_process_scan:
-            process_stat_data, process_status_data, process_cpu_load_data, prev_time, ticks_per_second, page_size= current_processes(process_stat_data, process_status_data, data_length, prev_time, ticks_per_second, page_size)
+            process_monitor.update(data_length)
             next_process_scan= data_collection + 2
             process_content_refresh= True
 
@@ -1030,7 +1027,7 @@ def main(stdscr):
                 cpu_load_window_ratio= 1
 
             if process_window is not None:
-                process_text_lengths= static_ui.processes(process_window, process_stat_data, process_window_positions[1])
+                process_text_lengths= static_ui.processes(process_window, process_monitor.process_list, process_window_positions[1])
                
         #CPU Dashboard dinamic content
         cpu_dashboard.update(cpu_temp_data, cpu_pressure_data, cpu_sensor_path)
@@ -1052,7 +1049,7 @@ def main(stdscr):
         #Processes Dashboard dinamic content
 
         if process_content_refresh is True:
-            processes_state, max_text_width, max_pid_width= processes_dashboard_state(process_cpu_load_data, process_stat_data, process_status_data, process_text_lengths, process_window_positions[1], ticks_per_second, process_username_list)
+            processes_state, max_text_width, max_pid_width= processes_dashboard_state(process_monitor, process_text_lengths, process_window_positions[1], ticks_per_second, process_username_list)
             process_window_content= process_dashboard_content_scrollable_layout (processes_state,  max_pid_width, max_text_width)
             if process_window is not None:
                 process_dashboard.rebuild_pad(process_window_content)

@@ -22,7 +22,7 @@ class NeededFiles:
             f.close()
         self.files.clear()
 
-class ProcessStat:
+class ProcessInfo:
 
     __slots__ = (
         "name",
@@ -36,29 +36,126 @@ class ProcessStat:
         "starttime",
         "state",
         "priority",
+        "cpu_load",
+        "uid"
     )
     #need to offset stat_list by 3
-    def __init__(self, name, stats_list, page_size):
+    def __init__(self, name, starttime, uid=None):
         self.name = name
-        self.ppid= stats_list[1]
-        self.state= stats_list[0]
-        self.utime = int(stats_list[11])
-        self.stime = int(stats_list[12])
-        self.process_time = self.utime + self.stime
-        self.num_threads = int(stats_list[17])
-        self.vsize = int(stats_list[20])//1048576 #Converts to MiB
-        self.rss = (int(stats_list[21]) * page_size)//1048576 #converts to bytes then MiB
-        self.starttime = int(stats_list[19])
-        self.priority= int(stats_list[15])
+        self.cpu_load= 0
+        self.uid= uid
+        self.ppid= 0
+        self.state= 0
+        self.utime = 0
+        self.stime = 0
+        self.process_time = 0
+        self.num_threads = 0
+        self.vsize = 0
+        self.rss = 0
+        self.starttime = starttime
+        self.priority= 0
 
-class ProcessStatus:
-
-    __slots__ = (
-            "Uid",
-    )
+class ProcessMonitor:
 
     def __init__(self):
-        pass
+        self.__page_size = os.sysconf("SC_PAGE_SIZE") #for calculating consumed memory
+        self.ticks_per_second = os.sysconf(os.sysconf_names["SC_CLK_TCK"]) #used for process load calculation
+        self.__prev_process_time= time.monotonic()
+        self.__proc_path= "/proc"
+        self.process_list= {}
+
+    def update(self, data_length=1000):
+        current_time= time.monotonic()
+        time_delta= current_time - self.__prev_process_time
+        self.__prev_process_time= current_time
+        data_length_index= 0
+
+        for proc_folder_path in os.scandir(self.__proc_path):
+            if data_length_index < data_length:
+                data_length_index+= 1
+            else:
+                break
+
+            pid_proc_path= proc_folder_path.path
+            pid_proc_string= proc_folder_path.name
+            if not pid_proc_string.isdigit():
+                    continue  
+                
+            PID= int(pid_proc_string)
+            stat_file= pid_proc_path + "/stat"
+
+            try:
+                    with open(stat_file) as f:
+                        line= f.readline()
+                        name_start= line.find("(")
+                        name_end= line.rfind(")")
+                        name = line[name_start + 1:name_end]
+                        stats_list= line[name_end + 2:].split(None, 22)
+
+                        ppid= stats_list[1]
+                        state= stats_list[0]
+                        utime = int(stats_list[11])
+                        stime = int(stats_list[12])
+                        process_time = utime + stime
+                        num_threads = int(stats_list[17])
+                        vsize = int(stats_list[20])//1048576 #Converts to MiB
+                        rss = (int(stats_list[21]) * self.__page_size)//1048576 #converts to bytes then MiB
+                        starttime = int(stats_list[19])
+                        priority= int(stats_list[15])
+
+            except FileNotFoundError:
+                #handles exception for new processes that are killed while I'm reading them. Deletes the entry in process_list too
+                    if PID in self.process_list:
+                        del self.process_list[PID]
+                    continue
+
+            #scan for process UID only when it's a new process or the process restarted
+            uid= None
+            if PID not in self.process_list or self.process_list[PID].starttime != starttime:
+                status_file= pid_proc_path + "/status"
+                try:
+                    with open(status_file) as f:
+                        for line in f:
+                            if line.startswith("Uid"):  
+                                uid= line.split()[1]
+                                        
+                            if uid:
+                                break
+
+                except FileNotFoundError:
+                #handles exception for new processes that are killed while I'm reading them. Deletes the entry in process_list too
+                    if PID in self.process_list:
+                        del self.process_list[PID]
+                    continue
+
+                process = ProcessInfo(name, starttime, uid)
+                process.utime = utime
+                process.ppid= ppid
+                process.state= state
+                process.stime = stime
+                process.priority= priority
+                process.vsize = vsize
+                process.num_threads= num_threads
+                process.rss = rss
+                self.process_list[PID] = process
+
+            else:
+                process = self.process_list[PID]
+                process.utime = utime
+                process.stime = stime
+                process.vsize = vsize
+                process.rss = rss
+                process.state= state
+                process.num_threads= num_threads
+                process.priority= priority
+
+            #handles edges cases for CPU Load calculation
+            if time_delta > 0:
+                #handles process restart
+                delta = process_time - process.process_time
+                process.process_time= process_time
+                if delta >= 0:  # ignore negative deltas due to PID reuse
+                    process.cpu_load = round((delta / self.ticks_per_second / time_delta) * 100, 1)
 
 class SystemUsername:
 
@@ -535,98 +632,15 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
 
     return data, network_data, current_time
 
-def current_processes(prev_stat_data= None, status_data= None, data_length= 1000, prev_time= None, ticks_per_second= None, page_size= None):
-    #https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html
-    if ticks_per_second is None:
-        ticks_per_second = os.sysconf(os.sysconf_names["SC_CLK_TCK"]) #used for process load calculation
-
-    current_time = time.monotonic() #used to calculate the difference in time between current and last calculation
-    if prev_time is not None:
-        time_delta= current_time - prev_time
-    else:
-        time_delta= -1
-
-    if page_size is None:
-        page_size = os.sysconf("SC_PAGE_SIZE")
-
-    path= "/proc"
-    stat_data = {} #process info and cpu load
-    if status_data is None:
-        status_data={} #chaching the Uid of user that's running the process
-
-    process_cpu_load= {}
-    data_length_index=0
-
-    for proc_folder_path in os.scandir(path):
-        if data_length_index < data_length:
-            data_length_index+= 1
-            pid_proc_path= proc_folder_path.path
-            pid_proc_string= proc_folder_path.name
-            if not pid_proc_string.isdigit():
-                continue  
-
-            PID= int(pid_proc_string)
-            stat_file= pid_proc_path + "/stat"
-            try:
-                with open(stat_file) as f:
-                    line= f.readline()
-                    _, _, rest = line.partition("(")
-                    name, _, stats = rest.partition(")")
-                    stats_list= stats.split(None, 22)
-                    process= ProcessStat(name,stats_list, page_size)
-                    stat_data[PID]= process
-
-            except FileNotFoundError:
-                #handles exception for new processes that are killed while I'm reading them
-                    if PID in status_data:
-                        del status_data[PID]
-
-            if (PID not in status_data) or (prev_stat_data is None) or (stat_data[PID].starttime != prev_stat_data[PID].starttime):
-                status_file= pid_proc_path + "/status"
-                uid= None
-                try:
-                    with open(status_file) as f:
-                        for line in f:
-                            if line.startswith("Uid"):  
-                                uid= line.split()[1]
-                                        
-                            if uid:
-                                break
-                        
-                        if uid:
-                            proc_status= ProcessStatus()
-                            proc_status.Uid= uid.strip()
-                            status_data[PID]= proc_status
-
-                except FileNotFoundError:
-                #handles exception for new processes that are killed while I'm reading them
-                    continue
-
-        else:
-            break
-            
-    
-    if (prev_stat_data is not None) and (time_delta > 0):
-        common_pids = prev_stat_data.keys() & stat_data.keys()
-        for PID in common_pids:
-                #PID reuse handling 
-                if stat_data[PID].starttime != prev_stat_data[PID].starttime: 
-                   continue
-
-                #handling process restart
-                process_time_delta= stat_data[PID].process_time- prev_stat_data[PID].process_time
-                if process_time_delta < 0: 
-                     continue
-                
-                process_time_delta_sec= process_time_delta / ticks_per_second
-                cpu_load_percetange= round((process_time_delta_sec / time_delta)* 100, 1) #normalizez based on the number of threads
-                process_cpu_load[PID]= cpu_load_percetange
-
-    return stat_data, status_data, process_cpu_load, current_time, ticks_per_second, page_size
-
 # if __name__ == "__main__": #for profiling functions
-#     for _ in range(10):
-#         processes = current_processes()
+#     prev_stat_data= None
+#     status_data= None
+#     data_length= 1000
+#     prev_time= None
+#     ticks_per_second= None
+#     page_size= None
+#     for _ in range(50):
+#         prev_stat_data, status_data, process_cpu_load, current_time, ticks_per_second, page_size= current_processes(prev_stat_data, status_data, data_length, prev_time, ticks_per_second, page_size)
 
-# if __name__ == "__main__":
-#      raise SystemExit(main())
+# # if __name__ == "__main__":
+# #      raise SystemExit(main())
