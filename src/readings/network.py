@@ -1,6 +1,5 @@
 from time import monotonic
-import os
-
+from os import path as os_path
 
 def network_traffic(file_path, previous_data= None, previous_time= None):
     if previous_data is None:
@@ -18,7 +17,7 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
                 interface = interface.strip()
                 if (previous_data is not None) and (interface in previous_data):
                     interface_type= previous_data[interface]["Type"]
-                elif os.path.exists(f"/sys/class/net/{interface}/device"):
+                elif os_path.exists(f"/sys/class/net/{interface}/device"):
                     interface_type= "Physical"
                 else:
                     interface_type= "Virtual"
