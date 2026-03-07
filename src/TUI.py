@@ -718,7 +718,7 @@ def processes_dashboard_state(process_monitor, process_text_lengths, process_win
 
                 process_uptime_string= format_time(process_monitor.process_list[PID].process_up_time)[:process_text_lengths[4]]
 
-                threads_string= f"{process_monitor.process_list[PID].num_threads:<{process_text_lengths[5]}}"[:process_text_lengths[5]]
+                threads_string= f"   {process_monitor.process_list[PID].num_threads:<{process_text_lengths[5]}}"[:process_text_lengths[5]]
                 cpu_string= f"{process_monitor.process_list[PID].cpu_load:<{max(1,process_text_lengths[6])}}"[:process_text_lengths[6]]
 
                 vMem_value= process_monitor.process_list[PID].vsize
