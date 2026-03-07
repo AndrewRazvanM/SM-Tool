@@ -38,7 +38,8 @@ class ProcessInfo:
         "priority",
         "cpu_load",
         "uid"
-    )
+        )
+    
     #need to offset stat_list by 3
     def __init__(self, name, starttime, uid=None):
         self.name = name
@@ -89,8 +90,8 @@ class ProcessMonitor:
             try:
                     with open(stat_file) as f:
                         line= f.readline()
-                        name_start= line.find("(")
-                        name_end= line.rfind(")")
+                        name_start = line.index("(")
+                        name_end = line.index(") ", name_start) #edge case handling
                         name = line[name_start + 1:name_end]
                         stats_list= line[name_end + 2:].split(None, 22)
 
@@ -155,7 +156,7 @@ class ProcessMonitor:
                 if delta >= 0:  # ignore negative deltas due to PID reuse
                     process.cpu_load = round((delta / self.ticks_per_second / time_delta) * 100, 1)
 
-        dead_processes= set(self.process_list.keys()) - current_pids
+        dead_processes= self.process_list.keys() - current_pids
         for remove_pid in dead_processes:
             del self.process_list[remove_pid]
 
@@ -634,15 +635,13 @@ def network_traffic(file_path, previous_data= None, previous_time= None):
 
     return data, network_data, current_time
 
-# if __name__ == "__main__": #for profiling functions
-#     prev_stat_data= None
-#     status_data= None
-#     data_length= 1000
-#     prev_time= None
-#     ticks_per_second= None
-#     page_size= None
-#     for _ in range(50):
-#         prev_stat_data, status_data, process_cpu_load, current_time, ticks_per_second, page_size= current_processes(prev_stat_data, status_data, data_length, prev_time, ticks_per_second, page_size)
+if __name__ == "__main__": #for profiling functions
+    data_length= 1000
+    results = ProcessMonitor()
+    for _ in range(50):
+        results.update(data_length)
 
-# # if __name__ == "__main__":
-# #      raise SystemExit(main())
+    print(len(results.process_list))
+
+# if __name__ == "__main__":
+#      raise SystemExit(main())
