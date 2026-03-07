@@ -139,13 +139,22 @@ class StaticInterface():
         return process_text_lengths
 
 class ContentDiff:
+    """
+    Checks for differences in content.
+    """
     def __init__(self, win):
         self.win= win
         self.prev_lines= []
         self.current_lines= []
+        self.dynamic_current_lines= []
         _, self.window_max_width= win.getmaxyx()
 
     def render(self):
+        """
+        Used for rendering differences in content. 
+        Expected input format: text, text_max_length, (is_bar, bar_length, bar_max), attribute, y, x
+         Uses the given co-ordinates. If y is None, then it starts from line 1 on the window.
+        """
         prev= self.prev_lines
         current= self.current_lines
         prev_len= len(prev)
@@ -153,17 +162,23 @@ class ContentDiff:
         for i, line in enumerate(current):
             if i >= prev_len or line != prev[i]:
                 text, text_max_length, (is_bar, bar_length, bar_max), attribute, y, x= current[i]
-                if is_bar is False:
-                    if attribute is None:
-                        self.win.addnstr(y, x, text, text_max_length - 1)
+                if y is not None:
+                    if is_bar is False:
+                        if attribute is None:
+                            self.win.addnstr(y, x, text, text_max_length - 1)
+                        else:
+                            self.win.addnstr(y, x, text, text_max_length - 1, attribute)
                     else:
-                        self.win.addnstr(y, x, text, text_max_length - 1, attribute)
+                        max_width= min(window_max_width - x, bar_max)
+                        filled= min(bar_length, max_width)
+                        empty= max_width - filled
+                        self.win.hline(y, x, text, filled, attribute)
+                        self.win.hline(y, x + filled, text, empty)
                 else:
-                    max_width= min(window_max_width - x, bar_max)
-                    filled= min(bar_length, max_width)
-                    empty= max_width - filled
-                    self.win.hline(y, x, text, filled, attribute)
-                    self.win.hline(y, x + filled, text, empty)
+                    if attribute is None:
+                        self.win.addnstr(i + 1, x, text, text_max_length - 1)
+                    else:
+                        self.win.addnstr(i + 1, x, text, text_max_length - 1, attribute)
 
         self.prev_lines= self.current_lines.copy()
         self.win.noutrefresh()
@@ -229,20 +244,30 @@ class ProcessDashboard():
         self.height, self.width = window.getmaxyx()
         self.__view= ContentDiff(window)
         self.scroll_pos= 0
+        window.noutrefresh()
 
-    def update(self, processes_state,  max_pid_width, max_text_width, scroll_pos, process_window_lines):
+    def update(self, processes_state,  max_pid_width, max_text_width):
         """
         Update the window content.
         """
-        process_window_content= process_dashboard_content_scrollable_layout (processes_state,  max_pid_width, max_text_width, scroll_pos, process_window_lines)
-        self.__view.current_lines= process_window_content
-        self.__view.render()
+        self.process_window_content= process_dashboard_content_layout (processes_state, max_pid_width, max_text_width)
 
-    def render(self):
+    def scroll_content(self, process_window_lines, key_press):
         """
-        Displays the visible portion of the window onto the screen.
+        Displays the visible portion of the window onto the screen and handles scrolling.
         Called every UI refresh.
         """
+        visible_lines= process_window_lines- 1 #reserves space for header
+        max_scroll_pos = max(0, len(self.process_window_content) - visible_lines)
+
+        #for scrolling through content
+        if key_press == curses.KEY_DOWN and self.scroll_pos < max_scroll_pos:
+                self.scroll_pos += 1
+
+        elif key_press == curses.KEY_UP and self.scroll_pos > 0:
+                self.scroll_pos -= 1
+
+        self.__view.current_lines= self.process_window_content[self.scroll_pos: self.scroll_pos + visible_lines]
         self.__view.render()
 
 def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3, green_text=5, yellow_text= 6, red_text= 7):
@@ -714,30 +739,26 @@ def processes_dashboard_state(process_monitor, process_text_lengths, process_win
             
     return process_window_content, max_text_width, max_pid_width
 
-def process_dashboard_content_scrollable_layout (content,  max_pid_width, max_text_width, scroll_pos, window_lines):
+def process_dashboard_content_layout (content,  max_pid_width, max_text_width):
     white_green= 8
     PID_string_attr= curses.color_pair(white_green) | curses.A_BOLD
     process_string_attr= None
-    window_lines-= 2 #reserves space for header and last line
     #first line is reserved for the static interface
-    visible_content_list= content[scroll_pos: scroll_pos + window_lines]
 
-    n = len(visible_content_list)
-    visible_content = [None] * (n * 2)
-    pid_x = 0
-    text_x = max_pid_width
+    n = len(content)
+    content_list = [None] * (n * 2)
     idx = 0
 
-    for i, (pid_string, string) in enumerate(visible_content_list):
+    for i, (pid_string, string) in enumerate(content):
 
         y = 1 + i
 
-        visible_content[idx] = (pid_string,max_pid_width,(False, 0, 0),PID_string_attr,y,pid_x,)
-        visible_content[idx + 1] = (string,max_text_width,(False, 0, 0),process_string_attr,y,text_x,)
+        content_list[idx] = (pid_string, max_pid_width, (False, 0, 0), PID_string_attr, None, 0,) #text, text_max_length (is_bar, bar_length, bar_max), attribute, y, x
+        content_list[idx + 1] = (string, max_text_width, (False, 0, 0), process_string_attr, None, max_pid_width) #text, text_max_length, attribute, x
 
         idx += 2
 
-    return visible_content
+    return content_list
 
 def invalidate_windows(stdscr, *windows):
     stdscr.clear()
@@ -861,7 +882,6 @@ def main(stdscr):
     next_gpu_read= 0 #to decouple gpu reads from interface
     #for process reads
     data_length= 1000 #max number of processes read - will make this changeable by the user in the interface
-    scroll_pos= 0
     next_process_scan= 0 #to decouple process reads from interface
     process_monitor= ProcessMonitor()
     ticks_per_second= process_monitor.ticks_per_second
@@ -981,40 +1001,39 @@ def main(stdscr):
             cpu_load_dashboard.render()
 
         #Processes Dashboard dinamic content
-        #for scrolling through content
-        if key_press == curses.KEY_DOWN:
-            if scroll_pos < process_window_width:
-                scroll_pos += 1
-
-        elif key_press == curses.KEY_UP:
-            if scroll_pos > 0:
-                scroll_pos -= 1
-
         if (process_content_refresh is True or key_press == curses.KEY_RESIZE) and process_window is not None:
             processes_state, max_text_width, max_pid_width= processes_dashboard_state(process_monitor, process_text_lengths, process_window_positions[1], ticks_per_second, process_username_list)
+            process_dashboard.update(processes_state, max_pid_width, max_text_width)
 
         if process_window is not None:
-            process_dashboard.update(processes_state,  max_pid_width, max_text_width, scroll_pos, process_window_lines)
-            process_dashboard.render() #refresh is done inside the render
+            #updates if no key_presses
+            if key_press == -1:
+                process_dashboard.scroll_content(process_window_lines, key_press)
+
+            #queues up all key presses and applies them
+            while key_press != -1:
+                if key_press == curses.KEY_UP or key_press == curses.KEY_DOWN:
+                    process_dashboard.scroll_content(process_window_lines, key_press) #rendering happens here
+        
+                elif key_press == ord('q'):
+                    file_path.close_all
+                    for file in cpu_temp_path:
+                        cpu_temp_path[file].close()
+
+                    if gpu_check_disable is False:
+                        try:
+                            pynvml.nvmlShutdown()
+                        except pynvml.NVML_ERROR_UNINITIALIZED:
+                            pass
+                    print("Program was stopped by the user.")
+                    break
+                key_press = stdscr.getch()
 
         #GPU Dashboard dinamic content
         gpu_dashboard.update(gpu_data, gpu_check_disable)
         gpu_dashboard.render()
 
         curses.doupdate()
-
-        if key_press == ord("q"):
-            file_path.close_all
-            for file in cpu_temp_path:
-                cpu_temp_path[file].close()
-
-            if gpu_check_disable is False:
-                try:
-                    pynvml.nvmlShutdown()
-                except pynvml.NVML_ERROR_UNINITIALIZED:
-                    pass
-            print("Program was stopped by the user.")
-            break
 
         #enforicng updates at monotonic intervals
         interface_refresh += 0.1
