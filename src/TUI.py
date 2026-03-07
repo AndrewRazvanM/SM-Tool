@@ -1,6 +1,6 @@
 import curses
-from functionalityv2 import *
-import time
+from time import monotonic, sleep
+from readings import network, cpu, nvidia, memory, system_pressure, file_handling, processes
 
 class StaticInterface():
 
@@ -823,24 +823,19 @@ def generate_windows(stdscr):
 
 def main(stdscr):
     #open static files
-    file_path= NeededFiles()
+    file_path= file_handling.NeededFiles()
     #to implement check disable in the TUI later
     memory_check_disable= False
     cpu_check_disable= False
-    gpu_check_disable= False
     gpu_fan_disabled= False
     gpu_mem_disabled= False
-    try:
-        pynvml.nvmlInit()
-    except (pynvml.NVMLError_LibraryNotFound,
-        pynvml.NVMLError_DriverNotLoaded,
-        pynvml.NVMLError_NoPermission) as error:
-        gpu_check_disable= True
+    
+    gpu_check_disable= nvidia.check_if_nvidia() #checks if nvidia on device
 
-    cpu_sensor, cpu_sensor_path= probe_cpu_sensors(cpu_check_disable) #check for available temp sensor and cache the path
-    cpu_name= get_cpu_name(cpu_check_disable) #check for the CPU name and cache it
-    gpu_name, gpu_handles= nvidia_gpu_name(gpu_check_disable) #check for the GPU name and cache it
-    process_username_list, current_user= get_process_username()
+    cpu_sensor, cpu_sensor_path= cpu.probe_cpu_sensors(cpu_check_disable) #check for available temp sensor and cache the path
+    cpu_name= cpu.get_cpu_name(cpu_check_disable) #check for the CPU name and cache it
+    gpu_name, gpu_handles= nvidia.nvidia_gpu_name(gpu_check_disable) #check for the GPU name and cache it
+    process_username_list, current_user= processes.get_process_username()
 
     if cpu_sensor_path == "N/A":
         cpu_check_disable= True
@@ -875,7 +870,7 @@ def main(stdscr):
     #initialize static variables
     static_ui= StaticInterface() #used to write the static interface
     initial_read= True #generates the interface only on launch
-    interface_refresh= time.monotonic() 
+    interface_refresh= monotonic() 
     next_temp_net_read= 0 #to decouple cpu temperature reads from interface
     next_load_read= 0 #to decouple cpu load reads from interface
     next_pressure_mem_read= 0 #to decouple memory reads from interface
@@ -883,7 +878,7 @@ def main(stdscr):
     #for process reads
     data_length= 1000 #max number of processes read - will make this changeable by the user in the interface
     next_process_scan= 0 #to decouple process reads from interface
-    process_monitor= ProcessMonitor()
+    process_monitor= processes.ProcessMonitor()
     ticks_per_second= process_monitor.ticks_per_second
     process_text_lengths= (0,0,0,0,0,0,0,0,0,0)
 
@@ -893,7 +888,7 @@ def main(stdscr):
     time_netw= None #for network traffic reads
 
     while True:
-        data_collection= time.monotonic()
+        data_collection= monotonic()
         key_press= stdscr.getch()
 
         #redraws content windows on resize
@@ -929,21 +924,21 @@ def main(stdscr):
 
         #collect readings - decoupled them from the interface refresh
         if data_collection > next_temp_net_read:
-            cpu_temp_data, cpu_temp_path= cpu_readings(cpu_check_disable, cpu_sensor_path, cpu_temp_path)
+            cpu_temp_data, cpu_temp_path= cpu.get_cpu_temp(cpu_check_disable, cpu_sensor_path, cpu_temp_path)
             next_temp_net_read= data_collection + 1.5
 
         if data_collection > next_load_read:
-            cpu_load_raw_data, cpu_load_calc_data= get_cpu_load(cpu_check_disable, file_path, cpu_load_raw_data)
-            network_raw_data, network_data, time_netw= network_traffic(file_path, network_raw_data, time_netw)
+            cpu_load_raw_data, cpu_load_calc_data= cpu.get_cpu_load(cpu_check_disable, file_path, cpu_load_raw_data)
+            network_raw_data, network_data, time_netw= network.network_traffic(file_path, network_raw_data, time_netw)
             next_load_read= data_collection + 1
 
         if data_collection > next_pressure_mem_read:
-            cpu_pressure_data, memory_pressure_data= system_pressure(cpu_check_disable, memory_check_disable, file_path)
-            memory_data= memory_readings(memory_check_disable, file_path)
+            cpu_pressure_data, memory_pressure_data= system_pressure.system_pressure(cpu_check_disable, memory_check_disable, file_path)
+            memory_data= memory.memory_readings(memory_check_disable, file_path)
             next_pressure_mem_read= data_collection + 1.5
 
         if data_collection > next_gpu_read:
-            gpu_data, gpu_fan_disabled, gpu_mem_disabled= nvidia_gpu_readings(gpu_check_disable, gpu_handles, gpu_fan_disabled, gpu_mem_disabled)
+            gpu_data, gpu_fan_disabled, gpu_mem_disabled= nvidia.nvidia_gpu_readings(gpu_check_disable, gpu_handles, gpu_fan_disabled, gpu_mem_disabled)
             next_gpu_read= data_collection + 1
 
         process_content_refresh= False #decouples content list building from TUI refresh
@@ -1021,10 +1016,7 @@ def main(stdscr):
                         cpu_temp_path[file].close()
 
                     if gpu_check_disable is False:
-                        try:
-                            pynvml.nvmlShutdown()
-                        except pynvml.NVML_ERROR_UNINITIALIZED:
-                            pass
+                        nvidia.close_nvidia_drivers()
                     print("Program was stopped by the user.")
                     break
                 key_press = stdscr.getch()
@@ -1037,9 +1029,9 @@ def main(stdscr):
 
         #enforicng updates at monotonic intervals
         interface_refresh += 0.1
-        sleep_time = interface_refresh - time.monotonic()
+        sleep_time = interface_refresh - monotonic()
         if sleep_time > 0:
-            time.sleep(sleep_time)
+            sleep(sleep_time)
 
 if __name__ == "__main__":
     curses.wrapper(main)
