@@ -6,6 +6,7 @@ class NeededFiles:
             "mem_pressure": open("/proc/pressure/memory", "r"),
             "cpu_pressure": open("/proc/pressure/cpu", "r"),
             "meminfo": open("/proc/meminfo", "r"),
+            "disk_info": open("/proc/diskstats", "r")
         }
 
     def get_file(self, name):
