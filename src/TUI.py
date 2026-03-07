@@ -1,5 +1,5 @@
 import curses
-from time import monotonic, sleep
+from time import monotonic, sleep, time
 from readings import network, cpu, nvidia, memory, system_pressure, file_handling, processes
 
 class StaticInterface():
@@ -269,6 +269,15 @@ class ProcessDashboard():
 
         self.__view.current_lines= self.process_window_content[self.scroll_pos: self.scroll_pos + visible_lines]
         self.__view.render()
+
+def format_time(sec:float) -> str:
+    """
+    Formats process up time to HH:MM:SS
+    """
+    sec= int(sec)
+    h, remainder = divmod(sec, 3600)
+    m, s = divmod(remainder, 60)
+    return f"{h:02}:{m:02}:{s:02}"
 
 def cpu_dashboard_state(cpu_temp_data, cpu_pressure_data, cpu_sensor_path, status_bar_ok= 1, status_bar_warning= 2, status_bar_critical= 3, green_text=5, yellow_text= 6, red_text= 7):
         #perssure state
@@ -706,13 +715,9 @@ def processes_dashboard_state(process_monitor, process_text_lengths, process_win
                     priority_string= f" {process_monitor.process_list[PID].priority:<{process_text_lengths[2]}}"[:process_text_lengths[2]] #adds 2 extra spaces for alignment for negative numbers
 
                 state_string= f"{process_monitor.process_list[PID].state:<{process_text_lengths[3]}}"[:process_text_lengths[3]]
-                process_uptime_seconds= (process_monitor.process_list[PID].process_time/ticks_per_second) #coverts the process time to seconds
-                if process_uptime_seconds >60:
-                    process_uptime_values= f"{round(process_uptime_seconds/60,1)} M" #converts the time to minute and makes it a string
-                else:
-                    process_uptime_values= f"{process_uptime_seconds} S" #makes it into a string and keeps it as seconds
 
-                process_uptime_string= f"{process_uptime_values:<{process_text_lengths[4]}}"[:process_text_lengths[4]]
+                process_uptime_string= format_time(process_monitor.process_list[PID].process_up_time)[:process_text_lengths[4]]
+
                 threads_string= f"{process_monitor.process_list[PID].num_threads:<{process_text_lengths[5]}}"[:process_text_lengths[5]]
                 cpu_string= f"{process_monitor.process_list[PID].cpu_load:<{max(1,process_text_lengths[6])}}"[:process_text_lengths[6]]
 
@@ -733,7 +738,7 @@ def processes_dashboard_state(process_monitor, process_text_lengths, process_win
                 pMem_string= f"{pMem_value:<{max(1, process_text_lengths[8] - 1)}}"[:process_text_lengths[8]] 
                 name_string= f" {process_monitor.process_list[PID].name:<{process_window_columns}}"
                 #create the process line string
-                final_string= f"{ppid_string}{user_string}{priority_string}{state_string}{process_uptime_string}{threads_string}{cpu_string}{vMem_string}{pMem_string}{name_string}"
+                final_string= f"{ppid_string}{user_string}{priority_string}{state_string}{process_uptime_string:<{process_text_lengths[4]}}{threads_string}{cpu_string}{vMem_string}{pMem_string}{name_string}"
 
                 process_window_content.append((pid_string, final_string))
             
@@ -878,7 +883,7 @@ def main(stdscr):
     #for process reads
     data_length= 1000 #max number of processes read - will make this changeable by the user in the interface
     next_process_scan= 0 #to decouple process reads from interface
-    process_monitor= processes.ProcessMonitor()
+    process_monitor= processes.ProcessMonitor(file_path)
     ticks_per_second= process_monitor.ticks_per_second
     process_text_lengths= (0,0,0,0,0,0,0,0,0,0)
 

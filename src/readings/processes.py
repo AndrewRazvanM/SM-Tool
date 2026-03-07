@@ -16,7 +16,8 @@ class ProcessInfo:
         "state",
         "priority",
         "cpu_load",
-        "uid"
+        "uid",
+        "process_up_time"
         )
     
     #need to offset stat_list by 3
@@ -47,12 +48,13 @@ class SystemUsername:
 
 class ProcessMonitor:
 
-    def __init__(self):
+    def __init__(self, file_path):
         self.__page_size = sysconf("SC_PAGE_SIZE") #for calculating consumed memory
         self.ticks_per_second = sysconf(sysconf_names["SC_CLK_TCK"]) #used for process load calculation
         self.__prev_process_time= monotonic()
         self.__proc_path= "/proc"
         self.process_list= {}
+        self.__sys_up_time_file= file_path
 
     def update(self, data_length=1000):
         current_time= monotonic()
@@ -60,6 +62,7 @@ class ProcessMonitor:
         self.__prev_process_time= current_time
         data_length_index= 0
         current_pids= set() #used to remove old entires in process_list
+        sys_up_time= self.__system_boot_time__()
 
         for proc_folder_path in scandir(self.__proc_path):
             if data_length_index < data_length:
@@ -94,6 +97,7 @@ class ProcessMonitor:
                         rss = (int(stats_list[21]) * self.__page_size)//1048576 #converts to bytes then MiB
                         starttime = int(stats_list[19])
                         priority= int(stats_list[15])
+                        process_up_time= sys_up_time - (starttime/self.ticks_per_second)
 
             except FileNotFoundError:
                 #handles exception for new processes that are killed while I'm reading them. 
@@ -125,6 +129,7 @@ class ProcessMonitor:
                 process.vsize = vsize
                 process.num_threads= num_threads
                 process.rss = rss
+                process.process_up_time= process_up_time
                 self.process_list[PID] = process
 
             else:
@@ -136,6 +141,7 @@ class ProcessMonitor:
                 process.state= state
                 process.num_threads= num_threads
                 process.priority= priority
+                process.process_up_time= sys_up_time - (starttime/self.ticks_per_second)
 
             #handles edges cases for CPU Load calculation
             if time_delta > 0:
@@ -148,6 +154,12 @@ class ProcessMonitor:
         dead_processes= self.process_list.keys() - current_pids
         for remove_pid in dead_processes:
             del self.process_list[remove_pid]
+
+    def __system_boot_time__(self):
+       
+        up_time= float(self.__sys_up_time_file.get_file("system_up_time").read().split()[0])
+
+        return up_time
 
 def get_process_username():
 
