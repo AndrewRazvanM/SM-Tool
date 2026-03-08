@@ -20,7 +20,7 @@ class DeviceIO:
     )
 
     def __init__ (self, list):
-        self.major_id= list[0]
+        self.major_id= int(list[0])
         self.reads_completed= int(list[3])
         self.sectors_read= int(list[5])
         self.writes_completed= int(list[7])
@@ -33,13 +33,15 @@ class DeviceIO:
         self.time_busy= None
 
     def update(self, list, time_delta, sectors_size):
+        
+        #need to go over this, calculating wrong stuff
         sectors_read= int(list[3])
         sectors_written= int(list[9])
         self.read_throughput = ((sectors_read - self.sectors_read) * sectors_size) / time_delta
         self.write_throughput= ((sectors_written - self.sectors_written) * sectors_size) / time_delta
 
-        self.reads_completed= sectors_read
-        self.sectors_read= int(list[5])
+        self.reads_completed= int(list[3])
+        self.sectors_read= sectors_read
         self.writes_completed= int(list[7])
         self.sectors_written= sectors_written
         self.ios_in_progress= int(list[11])
@@ -61,7 +63,7 @@ class ReadTotalIO:
         Gets the current readings for I/O Totals and updates the calculations where needed.
         """
         current_time= monotonic()
-        time_delta= monotonic() - self.prev_time
+        time_delta= current_time - self.prev_time
         self.prev_time= current_time
         sectors_size= self.sectors_size
 
@@ -84,15 +86,3 @@ class ReadTotalIO:
             
             else:
                 self.devices_total_io[name].update(list, time_delta, sectors_size)
-
-def main():
-    file_path= file_handling.NeededFiles()
-    output= ReadTotalIO(file_path)
-    sleep(1)
-    output.read_io_totals()
-    for device in output.devices_total_io:
-        print(f"{device}: {output.devices_total_io[device].read_throughput}")
-    
-
-if __name__ == "__main__":
-    main()
