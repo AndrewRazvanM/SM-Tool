@@ -159,6 +159,8 @@ class ContentDiff:
         current= self.current_lines
         prev_len= len(prev)
         window_max_width= self.window_max_width
+        
+        process_line_index= 1
         for i, line in enumerate(current):
             if i >= prev_len or line != prev[i]:
                 text, text_max_length, (is_bar, bar_length, bar_max), attribute, y, x= current[i]
@@ -176,9 +178,10 @@ class ContentDiff:
                         self.win.hline(y, x + filled, text, empty)
                 else:
                     if attribute is None:
-                        self.win.addnstr(i + 1, x, text, text_max_length - 1)
+                        self.win.addnstr(process_line_index, x, text, text_max_length - 1)
+                        process_line_index += 1
                     else:
-                        self.win.addnstr(i + 1, x, text, text_max_length - 1, attribute)
+                        self.win.addnstr(process_line_index, x, text, text_max_length - 1, attribute)
 
         self.prev_lines= self.current_lines.copy()
         self.win.noutrefresh()
@@ -257,7 +260,7 @@ class ProcessDashboard():
         Displays the visible portion of the window onto the screen and handles scrolling.
         Called every UI refresh.
         """
-        visible_lines= process_window_lines- 1 #reserves space for header
+        visible_lines= process_window_lines - 1 #reserves space for header
         max_scroll_pos = max(0, len(self.process_window_content) - visible_lines)
 
         #for scrolling through content
@@ -267,7 +270,7 @@ class ProcessDashboard():
         elif key_press == curses.KEY_UP and self.scroll_pos > 0:
                 self.scroll_pos -= 1
 
-        self.__view.current_lines= self.process_window_content[self.scroll_pos: self.scroll_pos + visible_lines]
+        self.__view.current_lines= self.process_window_content[self.scroll_pos: self.scroll_pos + (visible_lines *2) - 1]
         self.__view.render()
 
 def format_time(sec:float) -> str:
@@ -746,7 +749,7 @@ def processes_dashboard_state(process_monitor, process_text_lengths, process_win
 
 def process_dashboard_content_layout (content,  max_pid_width, max_text_width):
     white_green= 8
-    PID_string_attr= curses.color_pair(white_green) | curses.A_BOLD
+    PID_string_attr= curses.COLOR_BLUE | curses.A_BOLD
     process_string_attr= None
     #first line is reserved for the static interface
 
