@@ -5,12 +5,13 @@ class NeededFiles:
             "stat": open("/proc/stat", "r"),
             "mem_pressure": open("/proc/pressure/memory", "r"),
             "cpu_pressure": open("/proc/pressure/cpu", "r"),
+            "io_pressure": open("/proc/pressure/io", "r"),
             "meminfo": open("/proc/meminfo", "r"),
             "disk_info": open("/proc/diskstats", "r"),
             "system_up_time": open("/proc/uptime", "r")
         }
 
-    def get_file(self, name):
+    def get_file(self, name: str):
         f = self.files[name]
         f.seek(0)
         return f

@@ -1,4 +1,4 @@
-from os import scandir, sysconf, sysconf_names
+from os import scandir, sysconf, sysconf_names, open as os_open, O_RDONLY as os_O_RDONLY, pread, close as os_close
 from time import monotonic
 
 class ProcessInfo:
@@ -22,9 +22,9 @@ class ProcessInfo:
     
     #need to offset stat_list by 3
     def __init__(self, name, starttime, uid=None):
-        self.name = name
+        self.name = name.decode()
         self.cpu_load= 0
-        self.uid= uid
+        self.uid= int(uid)
         self.ppid= 0
         self.state= 0
         self.utime = 0
@@ -33,7 +33,7 @@ class ProcessInfo:
         self.num_threads = 0
         self.vsize = 0
         self.rss = 0
-        self.starttime = starttime
+        self.starttime = int(starttime)
         self.priority= 0
 
 class SystemUsername:
@@ -47,16 +47,67 @@ class SystemUsername:
         self.name, _, self.UID, _= line.strip().split(":", 3)
 
 class ProcessMonitor:
+    """
+    Stores and updates the process lists.
+     The update method can take a maximum number of processes scanned.
+    """
+    __slots__=(
+        "__page_size",
+        "ticks_per_second",
+        "__prev_process_time",
+        "__proc_path",
+        "process_list",
+        "__sys_up_time_file",
+        "user_list",
+        "current_user",
+    )
 
-    def __init__(self, file_path):
+    def __init__(self, file_path: object):
         self.__page_size = sysconf("SC_PAGE_SIZE") #for calculating consumed memory
         self.ticks_per_second = sysconf(sysconf_names["SC_CLK_TCK"]) #used for process load calculation
         self.__prev_process_time= monotonic()
         self.__proc_path= "/proc"
         self.process_list= {}
         self.__sys_up_time_file= file_path
+        self.user_list, self.current_user= self.__get_process_username()
 
-    def update(self, data_length=1000):
+    def __system_boot_time__(self):
+       
+        up_time= float(self.__sys_up_time_file.get_file("system_up_time").read().split()[0])
+
+        return up_time
+
+    def __get_process_username(self):
+
+        path= "/etc/passwd"
+        current_user_path= "/var/run/user"
+        username_data= {}
+        current_user_data= {}
+
+        try:
+            with open(path) as f:
+                for line in f:
+                    object= SystemUsername(line)
+                    username_data[object.UID]= object.name
+
+        except FileNotFoundError:
+            username_data={
+                "0": "root"
+            }
+        
+        try:
+            for uid in scandir(current_user_path):
+                current_user_data[uid]= True
+        
+        except FileNotFoundError:
+            pass
+
+        return username_data, current_user_data
+
+    def update(self, schedule, data_length=1000):
+        if schedule["processes"] is False:
+            return
+        
         current_time= monotonic()
         time_delta= current_time - self.__prev_process_time
         self.__prev_process_time= current_time
@@ -80,28 +131,29 @@ class ProcessMonitor:
             stat_file= pid_proc_path + "/stat"
 
             try:
-                    with open(stat_file) as f:
-                        line= f.readline()
-                        name_start = line.index("(")
-                        name_end = line.index(") ", name_start) #edge case handling
-                        name = line[name_start + 1:name_end]
-                        stats_list= line[name_end + 2:].split(None, 22)
+                file_descriptor = os_open(stat_file, os_O_RDONLY)
+                line= pread(file_descriptor, 512, 0)
+                name_start = line.index(b"(")
+                name_end = line.index(b") ", name_start) #edge case handling
+                name = line[name_start + 1:name_end]
+                stats_list= line[name_end + 2:].split(None, 22)
 
-                        ppid= stats_list[1]
-                        state= stats_list[0]
-                        utime = int(stats_list[11])
-                        stime = int(stats_list[12])
-                        process_time = utime + stime
-                        num_threads = int(stats_list[17])
-                        vsize = int(stats_list[20])//1048576 #Converts to MiB
-                        rss = (int(stats_list[21]) * self.__page_size)//1048576 #converts to bytes then MiB
-                        starttime = int(stats_list[19])
-                        priority= int(stats_list[15])
-                        process_up_time= sys_up_time - (starttime/self.ticks_per_second)
+                ppid= stats_list[1]
+                state= stats_list[0].decode()
+                utime = int(stats_list[11])
+                stime = int(stats_list[12])
+                process_time = utime + stime
+                num_threads = int(stats_list[17])
+                vsize = int(stats_list[20]) >> 20 #Converts to MiB
+                rss = (int(stats_list[21]) * self.__page_size) >> 20 #converts to bytes then MiB
+                starttime = int(stats_list[19])
+                priority= int(stats_list[15])
+                process_up_time= sys_up_time - (starttime/self.ticks_per_second)
+                os_close(file_descriptor)
 
             except FileNotFoundError:
                 #handles exception for new processes that are killed while I'm reading them. 
-                    continue
+                continue
 
             #scan for process UID only when it's a new process or the process restarted
             uid= None
@@ -122,7 +174,7 @@ class ProcessMonitor:
 
                 process = ProcessInfo(name, starttime, uid)
                 process.utime = utime
-                process.ppid= ppid
+                process.ppid= int(ppid)
                 process.state= state
                 process.stime = stime
                 process.priority= priority
@@ -154,36 +206,3 @@ class ProcessMonitor:
         dead_processes= self.process_list.keys() - current_pids
         for remove_pid in dead_processes:
             del self.process_list[remove_pid]
-
-    def __system_boot_time__(self):
-       
-        up_time= float(self.__sys_up_time_file.get_file("system_up_time").read().split()[0])
-
-        return up_time
-
-def get_process_username():
-
-    path= "/etc/passwd"
-    current_user_path= "/var/run/user"
-    username_data= {}
-    current_user_data= {}
-
-    try:
-        with open(path) as f:
-            for line in f:
-                object= SystemUsername(line)
-                username_data[object.UID]= object.name
-
-    except FileNotFoundError:
-        username_data={
-            "0": "root"
-        }
-    
-    try:
-        for uid in scandir(current_user_path):
-            current_user_data[uid]= True
-    
-    except FileNotFoundError:
-        pass
-
-    return username_data, current_user_data

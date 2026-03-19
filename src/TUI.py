@@ -27,7 +27,7 @@ class StaticInterface():
         cpu_window.addstr(5, 1, "Avg10:")
         cpu_window.addstr(5, 8, "| Avg60:")
         cpu_window.addstr(5, 17, "| Avg300:")
-        cpu_window.addstr(7, 1, "-" * 49)
+        cpu_window.hline(7, 1, "-", 49)
 
         cpu_window.addstr(8, 13, f"Temp sensor is {cpu_sensor}")
         cpu_window.addstr(9, 7, "CPU Die:")

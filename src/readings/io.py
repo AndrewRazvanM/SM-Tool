@@ -1,5 +1,4 @@
-import file_handling
-from time import monotonic, sleep
+from time import monotonic
 
 class DeviceIO:
     """
@@ -52,7 +51,7 @@ class DeviceIO:
 
 class ReadTotalIO:
 
-    def __init__(self, file_path):
+    def __init__(self, file_path: object):
         self.file_path= file_path.get_file("disk_info")
         self.sectors_size= 512 #to implement actual check later
         self.devices_total_io= {}
