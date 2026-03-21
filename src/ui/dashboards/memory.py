@@ -170,7 +170,7 @@ class MemoryDashboard:
         if mem_pressure[7].changed:
             style= mem_pressure[7].content.style
             attr= bar_style_map[style]
-            width= min(24, mem_pressure[7].content.value)
+            width= min(24, mem_pressure[7].content.bar_width)
             memory_dashboard.hline(10 + start_y, 1 + start_x, " ", width, attr)
             memory_dashboard.hline(10 + start_y, 1 + start_x + width, " ", 23 - width) 
 

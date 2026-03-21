@@ -15,7 +15,7 @@ class Nvidia:
     )
 
     def __init__(self):
-        self.gpu_check_disable= self.__check_if_nvidia()
+        self.gpu_check_disable= self.__init_nvml()
         self.gpu_handles= []
         self.gpu_name_list= []
         self.__nvidia_gpu_name()
@@ -35,9 +35,9 @@ class Nvidia:
                 gpu_name_list.append(gpu_name)
 
         else:
-            self.gpu_name_list[0]= "N/A"
+            self.gpu_name_list.append("N/A")
 
-    def __check_if_nvidia(self):
+    def __init_nvml(self):
         """
         Checks if nVidia card on device and initializez pynvml
         """
@@ -113,19 +113,21 @@ class Nvidia:
                     gpu_index+= 1
             
             else:
-                gpu_data[0]= {
+                self.gpus_readings[0]= {
                     "Temperature": "N/A",
                     "GPU Clock Speed": "N/A",
                     "Fan Speed": "N/A",
                     "Memory Load": "N/A",
-                    "GPU Load":"N/A",
+                    "GPU Load": "N/A",
+                    "GPU Mem Clock": "N/A"
                 }
 
         except (pynvml.NVMLError_LibraryNotFound, OSError, pynvml.NVMLError, RuntimeError):
-                gpu_data[0]= {
-                "Temperature": "N/A",
-                "GPU Clock Speed": "N/A",
-                "Fan Speed": "N/A",
-                "Memory Load": "N/A",
-                "GPU Load": "N/A",
+                self.gpus_readings[0]= {
+                    "Temperature": "N/A",
+                    "GPU Clock Speed": "N/A",
+                    "Fan Speed": "N/A",
+                    "Memory Load": "N/A",
+                    "GPU Load": "N/A",
+                    "GPU Mem Clock": "N/A"
                 }

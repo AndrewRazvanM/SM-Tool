@@ -53,7 +53,7 @@ class CPUInfo:
 
     def __init__(self, file_path: object):
 
-        self.sensor_name, self.cpu_sensor_path= self.__probe_cpu_sensors()
+        self.sensor_name, self.cpu_sensor_path = self.__probe_cpu_sensors()
 
         self.file_path= file_path
         self.cpu_temp= None
@@ -88,8 +88,10 @@ class CPUInfo:
         "tcpu",
         "acpitz",
         )
+
+        temp_sensors= {}     
         sensor_name= "N/A"
-        temp_sensors= {}        
+        cpu_sensor_path= "N/A"
 
         try:
             for sensor_file in scandir(path):
@@ -106,13 +108,15 @@ class CPUInfo:
                 
                 temp_sensors[sensor_name]= sensor_folder_path
 
+            for match in sensors:
+                if match in temp_sensors:
+                    return match, temp_sensors[match]
+            
+            return sensor_name, cpu_sensor_path #if no matches found, return N/A for both values
+
         except FileNotFoundError:
-            return sensor_name, None
-
-        for match in sensors:
-            if match in temp_sensors:
-                return match, temp_sensors[match]
-
+            return sensor_name, cpu_sensor_path
+        
     def get_cpu_temp(self, disable_cpu_check: bool, schedule: dict):
         if schedule["cpu"] is False:
             return
@@ -124,7 +128,7 @@ class CPUInfo:
             cpu_label_index=-1 #CPU label files are optional. Adding this as an alternative when it's not available
             fan_label= -1 #same as above
             
-            if cpu_sensor_path is None:
+            if cpu_sensor_path == "N/A":
                 return 
 
             average_temp= 0

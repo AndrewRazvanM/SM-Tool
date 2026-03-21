@@ -134,7 +134,7 @@ class CPUDashboard:
         if cpu_info[1].changed:
             style= cpu_info[1].content.style
             attr= bar_style_map[style]
-            width= min(24, cpu_info[1].content.value)
+            width= min(24, cpu_info[1].content.bar_width)
             cpu_dashboard.hline(10 + start_y, 1 + start_x, " ", width, attr)
             cpu_dashboard.hline(10 + start_y, 1 + start_x + width, " ", 24 - width)
 
@@ -146,7 +146,7 @@ class CPUDashboard:
         if cpu_info[3].changed:
             style= cpu_info[3].content.style
             attr= bar_style_map[style]
-            width= min(23, cpu_info[3].content.value)
+            width= min(23, cpu_info[3].content.bar_width)
             cpu_dashboard.hline(10 + start_y, 27 + start_x, " ", width, attr)
             cpu_dashboard.hline(10 + start_y, 27 + start_x + width, " ", 23 - width)
 
@@ -183,7 +183,7 @@ class CPUDashboard:
         if cpu_pressure[4].changed:
             style= cpu_pressure[4].content.style
             attr= bar_style_map[style]
-            width= min(23, cpu_pressure[4].content.value)
+            width= min(23, cpu_pressure[4].content.bar_width)
             cpu_dashboard.hline(6 + start_y, 27 + start_x, " ", width, attr)
             cpu_dashboard.hline(6 + start_y, 27 + start_x + width, " ", 23 - width)
 
