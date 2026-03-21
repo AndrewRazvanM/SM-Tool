@@ -1,6 +1,0 @@
-TUI
-app
-core
-main
-readings
-ui
