@@ -34,7 +34,7 @@ class DeviceIO:
     def update(self, list, time_delta, sectors_size):
         
         #need to go over this, calculating wrong stuff
-        sectors_read= int(list[3])
+        sectors_read= int(list[5])
         sectors_written= int(list[9])
         self.read_throughput = ((sectors_read - self.sectors_read) * sectors_size) / time_delta
         self.write_throughput= ((sectors_written - self.sectors_written) * sectors_size) / time_delta

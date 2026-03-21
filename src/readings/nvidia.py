@@ -34,6 +34,9 @@ class Nvidia:
                 gpu_handles.append(gpu_handle)
                 gpu_name_list.append(gpu_name)
 
+        else:
+            self.gpu_name_list[0]= "N/A"
+
     def __check_if_nvidia(self):
         """
         Checks if nVidia card on device and initializez pynvml
@@ -82,7 +85,7 @@ class Nvidia:
 
                         except pynvml.NVMLError:
                             gpu_fan = "N/A"
-                            gpu_fan_disabled= True
+                            self.gpu_fan_disabled= True
                     else:
                         gpu_fan = "N/A"
 
@@ -95,7 +98,7 @@ class Nvidia:
 
                         except pynvml.NVMLError:
                             gpu_core_mem= "N/A"
-                            gpu_mem_disabled= True
+                            self.gpu_mem_disabled= True
                     else:
                         gpu_core_mem= "N/A"
 

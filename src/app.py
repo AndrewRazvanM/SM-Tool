@@ -119,6 +119,7 @@ class Application:
                 self.running= False
                 self.files_path.close_all()
                 self.cpu_service.close_temp_files()
+                self.nvidia_services.close_nvidia_drivers()
 
     def run(self):
         #create local references
