@@ -598,3 +598,5 @@ class NvidiaFormatter:
             formatted_nvidia_output[5].style= formatted_gpu_load_attr
             formatted_nvidia_output[6].bar_width= gpu_load_bar_width
             formatted_nvidia_output[6].style= formatted_gpu_load_attr
+
+# class ProcessFormatter:

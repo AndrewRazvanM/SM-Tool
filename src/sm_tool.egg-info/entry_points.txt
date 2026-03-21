@@ -1,0 +1,2 @@
+[console_scripts]
+sm-tool = main:app_caller

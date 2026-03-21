@@ -8,4 +8,11 @@ dependencies = [
     "nvidia-ml-py>=13.590.48",        # NVIDIA NVML Python bindings
 ]
 
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+sm-tool = "main:app_caller"
+
 

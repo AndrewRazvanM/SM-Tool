@@ -1,3 +1,13 @@
+Metadata-Version: 2.4
+Name: sm-tool
+Version: 0.1.0
+Summary: System Monitoring tool written in Python.
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: nvidia-ml-py>=13.590.48
+Dynamic: license-file
+
 Real-time system monitoring tool written in Python with a TUI (curses-based like htop). Intended to have a simple layout and provide all the system monitoring needs a user has. Does not yet have the capability to kill/stop or search processes.
 
 Currently implemented:
@@ -13,7 +23,7 @@ Currently implemented:
   - Current processes (/proc/pid/stat and /proc/pid/status):
      - Process information
      - Process CPU usage % (htop style calculation)
-- Reads Nvidia graphic card telemetry via NVML (nvidia-ml-py)
+- Reads Nvidia graphic card telemetry via NVML (pynvml)
 
 ![SM-Tool](assets/ReadMeScreenshot.png)
 
@@ -23,8 +33,4 @@ To be implemented:
 - Process management (search, kill/stop)
 
 Current dependencies:
-- nvidia-ml-py
-
-To build the app, you need to run the one of the commands below in the terminal:
-- pip install -e ./SM-Tool
-   - this needs to be ran from the folder where the app was donloaded
+- pynvml
