@@ -71,7 +71,7 @@ class ProcessMonitor:
         self.__sys_up_time_file= file_path
         self.user_list, self.current_user= self.__get_process_username()
 
-    def __system_boot_time__(self):
+    def _get_system_uptime(self):
        
         up_time= float(self.__sys_up_time_file.get_file("system_up_time").read().split()[0])
 
@@ -87,8 +87,8 @@ class ProcessMonitor:
         try:
             with open(path) as f:
                 for line in f:
-                    object= SystemUsername(line)
-                    username_data[object.UID]= object.name
+                    username_object= SystemUsername(line)
+                    username_data[username_object.UID]= username_object.name
 
         except FileNotFoundError:
             username_data={
@@ -113,7 +113,7 @@ class ProcessMonitor:
         self.__prev_process_time= current_time
         data_length_index= 0
         current_pids= set() #used to remove old entires in process_list
-        sys_up_time= self.__system_boot_time__()
+        sys_up_time= self._get_system_uptime()
 
         for proc_folder_path in scandir(self.__proc_path):
             if data_length_index < data_length:

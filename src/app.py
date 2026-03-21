@@ -116,14 +116,13 @@ class Application:
                 self.scheduler.intervals["nvidia"] = True
             
             if key == ord("q"):
+                self.running= False
                 self.files_path.close_all()
                 self.cpu_service.close_temp_files()
-                self.running= False
 
     def run(self):
         #create local references
         stdscr= self.stdscr
-        running= self.running
         scheduler= self.scheduler
         #mem
         mem_service= self.mem_service
@@ -171,7 +170,7 @@ class Application:
         network_dashboard.draw_static_interface()
         nvidia_dashboard.draw_static_interface()
 
-        while running:
+        while self.running:
 
             self.handle_input(stdscr)
 
@@ -179,7 +178,7 @@ class Application:
 
             #get system readings
             mem_service.update(schedule)
-            pressure_service.read_mem(memory_check_disable, schedule)
+            memory_check_disable= pressure_service.read_mem(memory_check_disable, schedule)
             pressure_service.read_cpu(disable_cpu_check, schedule)
             cpu_service.get_cpu_temp(disable_cpu_check, schedule)
             cpu_service.get_cpu_load(disable_cpu_check, schedule)

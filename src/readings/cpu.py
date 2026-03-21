@@ -63,7 +63,7 @@ class CPUInfo:
         self.cpu_load_raw_data_prev= None
         self.cpu_fan= None
         self.cpu_name= self.__get_cpu_name()
-        self.get_cpu_load(False, {"cpu": True})
+        self.get_cpu_load(False, {"cpu": True}) #needed to initialyze the CPU dashboard in the TUI
 
     def __get_cpu_name(self):
         path= "/proc/cpuinfo"
@@ -107,7 +107,7 @@ class CPUInfo:
                 temp_sensors[sensor_name]= sensor_folder_path
 
         except FileNotFoundError:
-            return
+            return sensor_name, None
 
         for match in sensors:
             if match in temp_sensors:
@@ -121,7 +121,7 @@ class CPUInfo:
             cpu_sensor_path= self.cpu_sensor_path
             cpu_temp= self.cpu_temp
             cpu_fan= self.cpu_fan
-            label=-1 #CPU label files are optional. Adding this as an alternative when it's not available
+            cpu_label_index=-1 #CPU label files are optional. Adding this as an alternative when it's not available
             fan_label= -1 #same as above
             
             if cpu_sensor_path is None:
@@ -150,7 +150,8 @@ class CPUInfo:
                                 with open(file_label_path) as l:
                                     label= str(l.read().strip())
                             except FileNotFoundError:
-                                label+= 1
+                                cpu_label_index+= 1
+                                label= f"CPU {cpu_label_index}"
 
                             cpu_temp[label]= CPUTemp(temperature, temp_file_descriptor)
 
@@ -273,4 +274,5 @@ class CPUInfo:
         cpu_temp= self.cpu_temp
         if cpu_temp is not None:
             for cpu in cpu_temp:
-                cpu_temp[cpu].close()
+                if cpu != "Average":
+                    cpu_temp[cpu].close()

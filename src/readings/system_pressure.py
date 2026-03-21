@@ -54,7 +54,7 @@ class SystemPressure:
                 #health score calculation
                 penalty= (some_avg10 + some_avg60 * 2.00 + some_avg300 * 3.00 + full_avg10 * 20.00 + full_avg60 * 40.00 + full_avg300 * 60.00)
                 health_score= max(0,100- penalty)
-                health_bar_width= max(24, health_score//4)
+                health_bar_width= min(24, health_score//4)
                 self.memory_health= (health_score, health_bar_width)
 
             except FileNotFoundError:
