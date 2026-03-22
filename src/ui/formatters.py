@@ -92,13 +92,13 @@ class PressureFormatter:
             cpu_avg300_state= 2
 
 
-        cpu_formatted_output[0].value = f"{cpu_avg10:<5}"[:5]
+        cpu_formatted_output[0].value = f"{cpu_avg10:<5.5}"
         cpu_formatted_output[0].style = cpu_avg10_state
-        cpu_formatted_output[1].value = f"{cpu_avg60:<5}"[:5]
+        cpu_formatted_output[1].value = f"{cpu_avg60:<5.5}"
         cpu_formatted_output[1].style = cpu_avg60_state
-        cpu_formatted_output[2].value = f"{cpu_avg300:<5}"[:5]
+        cpu_formatted_output[2].value = f"{cpu_avg300:<5.5}"
         cpu_formatted_output[2].style = cpu_avg300_state
-        cpu_formatted_output[3].value= f"{cpu_pressure_health:<5}"[:5]
+        cpu_formatted_output[3].value= f"{cpu_pressure_health:<5.5}"
         cpu_formatted_output[3].style= cpu_pressure_health_state
         cpu_formatted_output[4].bar_width= cpu_pressure_bar_width
         cpu_formatted_output[4].style= cpu_pressure_bar_state
@@ -189,19 +189,19 @@ class PressureFormatter:
             mem_score_state= 2
             mem_bar_state= 2
 
-        memory_formatted_output[0].value= f"{some_avg10}"[:5]
+        memory_formatted_output[0].value= f"{some_avg10:<5.5}"
         memory_formatted_output[0].style= some_avg10_state
-        memory_formatted_output[1].value= f"{some_avg60:<5}"[:5]
+        memory_formatted_output[1].value= f"{some_avg60:<5.5}"
         memory_formatted_output[1].style= some_avg60_state
-        memory_formatted_output[2].value= f"{some_avg300:<5}"[:5]
+        memory_formatted_output[2].value= f"{some_avg300:<5.5}"
         memory_formatted_output[2].style= some_avg300_state
-        memory_formatted_output[3].value= f"{full_avg10:<5}"[:5]
+        memory_formatted_output[3].value= f"{full_avg10:<5.5}"
         memory_formatted_output[3].style= full_avg10_state
-        memory_formatted_output[4].value= f"{full_avg60:<5}"[:5]
+        memory_formatted_output[4].value= f"{full_avg60:<5.5}"
         memory_formatted_output[4].style= full_avg60_state
-        memory_formatted_output[5].value= f"{full_avg300:<5}"[:5]
+        memory_formatted_output[5].value= f"{full_avg300:<5.5}"
         memory_formatted_output[5].style= full_avg300_state
-        memory_formatted_output[6].value= f"{memory_health[0]:<5}"[:5]
+        memory_formatted_output[6].value= f"{memory_health[0]:<5.5}"
         memory_formatted_output[6].style= mem_score_state
         memory_formatted_output[7].bar_width= memory_health[1]
         memory_formatted_output[7].style= mem_bar_state
@@ -327,7 +327,7 @@ class CPUFormatter:
         if "Package id 0" in cpu_temp_dict:
             cpu_temp_dict_length-= 1
             die_temperature_val= cpu_temp_dict["Package id 0"].temp
-            die_temp= f"{die_temperature_val:>3} °C"[:6]
+            die_temp= f"{die_temperature_val:>3} °C"
 
             if die_temperature_val <70:
                 die_temp_state= 0
@@ -350,7 +350,7 @@ class CPUFormatter:
         if "Average" in cpu_temp_dict:
             cpu_temp_dict_length-= 1
             average_temp_val= cpu_temp_dict["Average"]
-            average_temp= f"{average_temp_val:>3} °C"[:6]
+            average_temp= f"{average_temp_val:>3} °C"
 
             if average_temp_val <70:
                 average_temp_state= 0
@@ -370,8 +370,8 @@ class CPUFormatter:
             average_temp_bar_width= 0
             average_temp_bar_state= 0
 
-        num_cpu_threads= f" {num_threads:<4}"[:4]
-        num_cpu_core= f" {cpu_temp_dict_length:<4}"[:4]
+        num_cpu_threads= f" {num_threads:<4}"
+        num_cpu_core= f" {cpu_temp_dict_length:<4}"
         formatted_cpu_readings[0].value= die_temp 
         formatted_cpu_readings[0].style= die_temp_state
         formatted_cpu_readings[1].bar_width = die_temp_bar_width
@@ -455,11 +455,11 @@ class NetworkFormatter:
 
             up_bits= sent * 8
             if up_bits < 1000000:
-                sent_string= f"Up: {round((up_bits)/1000, 3):>13} Kb/s"
+                sent_string= f"Up: {round((up_bits)/1000, 3):>13.13} Kb/s"
             elif up_bits < 1000000000:
-                sent_string= f"Up: {round((up_bits)/1000000, 3):>13} Mb/s"
+                sent_string= f"Up: {round((up_bits)/1000000, 3):>13.13} Mb/s"
             else:
-                sent_string= f"Up: {round((up_bits)/1000000000, 3):>13} Gb/s"
+                sent_string= f"Up: {round((up_bits)/1000000000, 3):>13.13} Gb/s"
 
             formatted_network_output[formatted_output_index].value= f"{interface}: {received_string} | {sent_string}"[:49]
             formatted_output_index+= 1
@@ -471,35 +471,35 @@ class NetworkFormatter:
         
         received_bits = total_received * 8
         if received_bits < 1000000:
-            formatted_network_output[0].value= f"{round((total_received)/1000, 3):>10} Kb/s"[:15]
+            formatted_network_output[0].value= f"{round((total_received)/1000, 3):>10.10} Kb/s"
         elif received_bits < 1000000000:
-            formatted_network_output[0].value= f"{round((total_received)/1000000, 3):>10} Mb/s"[:15]
+            formatted_network_output[0].value= f"{round((total_received)/1000000, 3):>10.10} Mb/s"
         else:
-            formatted_network_output[0].value= f"{round((total_received)/1000000000, 3):>10} Gb/s"[:15]
+            formatted_network_output[0].value= f"{round((total_received)/1000000000, 3):>10.10} Gb/s"
 
         r_dropp_bits= total_received_dropp * 8
         if r_dropp_bits < 1000000:
-            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000, 3):>10} Kb/s"[:15]
+            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000, 3):>10.10} Kb/s"
         elif r_dropp_bits < 1000000000:
-            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000, 3):>10} Mb/s"[:15]
+            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000, 3):>10.10} Mb/s"
         else:
-            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000000, 3):>10} Gb/s"[:15]
+            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000000, 3):>10.10} Gb/s"
 
         up_bits= total_sent * 8
         if up_bits < 1000000:
-            formatted_network_output[2].value= f"{round((up_bits)/1000, 3):>8} Kb/s"[:13]
+            formatted_network_output[2].value= f"{round((up_bits)/1000, 3):>8.8} Kb/s"
         elif up_bits < 1000000000:
-            formatted_network_output[2].value= f"{round((up_bits)/1000000, 3):>8} Mb/s"[:13]
+            formatted_network_output[2].value= f"{round((up_bits)/1000000, 3):>8.8} Mb/s"
         else:
-            formatted_network_output[2].value= f"{round((up_bits)/1000000000, 3):>8} Gb/s"[:13]
+            formatted_network_output[2].value= f"{round((up_bits)/1000000000, 3):>8.8} Gb/s"
 
         up_dropp_bits= total_sent_dropp * 8
         if up_dropp_bits < 1000000:
-            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000, 3):>8} Kb/s"[:13]
+            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000, 3):>8.8} Kb/s"
         elif up_dropp_bits < 1000000000:
-            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000, 3):>8} Mb/s"[:13]
+            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000, 3):>8.8} Mb/s"
         else:
-            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000000, 3):>8} Gb/s"[:13]
+            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000000, 3):>8.8} Gb/s"
 
 class NvidiaFormatter:
 
@@ -520,7 +520,7 @@ class NvidiaFormatter:
         for gpu_index in gpu_readings:
 
             if gpu_readings[gpu_index]["Temperature"] == "N/A":
-                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]:<30}"[:30]
+                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]:<30.30}"
                 formatted_temp_attr= 3
                 gpu_temp_bar_width= 3
             elif gpu_readings[gpu_index]["Temperature"] < 70:
@@ -528,11 +528,11 @@ class NvidiaFormatter:
                 formatted_temp_attr= 0
                 gpu_temp_bar_width= min(49, int((gpu_readings[gpu_index]["Temperature"] /100) * 49))
             elif gpu_readings[gpu_index]["Temperature"] < 80:
-                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]} {"°C":<30}"[:30]
+                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]} {"°C":<30.30}"
                 formatted_temp_attr= 1
                 gpu_temp_bar_width= min(49, int((gpu_readings[gpu_index]["Temperature"] /100) * 49))
             else:
-                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]} {"°C":<30}"[:30]
+                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]} {"°C":<30.30}"
                 formatted_temp_attr= 2
                 gpu_temp_bar_width= min(49, int((gpu_readings[gpu_index]["Temperature"] /100) * 49))
 
@@ -542,55 +542,55 @@ class NvidiaFormatter:
             formatted_nvidia_output[1].style=formatted_temp_attr
 
             if gpu_readings[gpu_index]["GPU Clock Speed"] == "N/A":
-                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]:<30}"[:30]
+                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]:<30.30}"
                 formatted_clock_speed_attr= 3
             else:
-                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]} {"Mhz":<30}"[:30]
+                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]} {"Mhz":<30.30}"
                 formatted_clock_speed_attr= 0
 
             formatted_nvidia_output[2].value= formatted_clock_speed
             formatted_nvidia_output[2].style= formatted_clock_speed_attr
 
             if gpu_readings[gpu_index]["Fan Speed"] == "N/A":
-                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]:<30}"[:30]
+                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]:<30.30}"
                 formatted_fan_speed_attr= 3
             else:
-                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]} {"RPM":<30}"[:30] 
+                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]} {"RPM":<30.30}"
                 formatted_fan_speed_attr= 0
 
             formatted_nvidia_output[3].value= formatted_fan_speed
             formatted_nvidia_output[3].style= formatted_fan_speed_attr
 
             if gpu_readings[gpu_index]["Memory Load"] == "N/A":
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]:<30}"[:30]
+                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]:<30.30}"
                 formatted_memory_load_attr= 3
             elif gpu_readings[gpu_index]["Memory Load"] < 60:
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30}"[:30]
+                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30.30}"
                 formatted_memory_load_attr= 0
             elif gpu_readings[gpu_index]["Memory Load"] < 90:
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30}"[:30]
+                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30.30}"
                 formatted_memory_load_attr= 1
             else:
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30}"[:30]
+                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30.30}"
                 formatted_memory_load_attr= 2
 
             formatted_nvidia_output[4].value= formatted_memory_load
             formatted_nvidia_output[4].style= formatted_memory_load_attr
 
             if gpu_readings[gpu_index]["GPU Load"] == "N/A":
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]:<30}"[:30]
+                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]:<30.30}"
                 formatted_gpu_load_attr= 3
                 gpu_load_bar_width= 1
             elif gpu_readings[gpu_index]["GPU Load"] < 60:
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30}"[:30]
+                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30.30}"
                 formatted_gpu_load_attr= 0
                 gpu_load_bar_width= min(49, int((gpu_readings[gpu_index]["GPU Load"] / 100) * 49))
             elif gpu_readings[gpu_index]["GPU Load"] < 90:
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30}"[:30]
+                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30.30}"
                 formatted_gpu_load_attr= 1
                 gpu_load_bar_width= min(49, int((gpu_readings[gpu_index]["GPU Load"] / 100) * 49))
             else:
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30}"[:30]
+                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30.30}"
                 formatted_gpu_load_attr= 2
                 gpu_load_bar_width= min(49, int((gpu_readings[gpu_index]["GPU Load"] / 100) * 49))
 

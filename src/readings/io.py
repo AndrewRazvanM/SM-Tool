@@ -33,22 +33,23 @@ class DeviceIO:
 
     def update(self, list, time_delta, sectors_size):
         
-        #need to go over this, calculating wrong stuff
         sectors_read= int(list[5])
         sectors_written= int(list[9])
+        reads_completed= int(list[3])
+        time_doing_ios_ms= int(list[12])
+
         self.read_throughput = ((sectors_read - self.sectors_read) * sectors_size) / time_delta
         self.write_throughput= ((sectors_written - self.sectors_written) * sectors_size) / time_delta
+        self.iops= (reads_completed - self.reads_completed) / time_delta
+        self.time_busy= time_doing_ios_ms - self.time_doing_ios_ms / time_delta
 
-        self.reads_completed= int(list[3])
+        self.reads_completed= reads_completed
         self.sectors_read= sectors_read
         self.writes_completed= int(list[7])
         self.sectors_written= sectors_written
         self.ios_in_progress= int(list[11])
-        self.time_doing_ios_ms= int(list[12])
+        self.time_doing_ios_ms= time_doing_ios_ms
         
-        self.iops= (self.reads_completed + self.writes_completed) / time_delta
-        self.time_busy= self.time_doing_ios_ms / time_delta
-
 class ReadTotalIO:
 
     def __init__(self, file_path: object):
