@@ -118,17 +118,17 @@ class NetworkDashboard:
                 network_dashboard.addstr(1 + start_y, 10 + start_x, content_list[0].content.value, attr)
 
             if content_list[1].changed:
-                style= content_list[0].content.style
+                style= content_list[1].content.style
                 attr= style_map[style]
                 network_dashboard.addstr(2 + start_y, 10 + start_x, content_list[1].content.value, attr)
 
             if content_list[2].changed:
-                style= content_list[0].content.style
+                style= content_list[2].content.style
                 attr= style_map[style]
                 network_dashboard.addstr(1 + start_y, 37 + start_x, content_list[2].content.value, attr)
 
             if content_list[3].changed:
-                style= content_list[0].content.style
+                style= content_list[3].content.style
                 attr= style_map[style]
                 network_dashboard.addstr(2 + start_y, 37 + start_x, content_list[3].content.value, attr)
 
