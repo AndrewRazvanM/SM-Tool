@@ -41,7 +41,7 @@ class DeviceIO:
         self.read_throughput = ((sectors_read - self.sectors_read) * sectors_size) / time_delta
         self.write_throughput= ((sectors_written - self.sectors_written) * sectors_size) / time_delta
         self.iops= (reads_completed - self.reads_completed) / time_delta
-        self.time_busy= time_doing_ios_ms - self.time_doing_ios_ms / time_delta
+        self.time_busy= (time_doing_ios_ms - self.time_doing_ios_ms) / time_delta
 
         self.reads_completed= reads_completed
         self.sectors_read= sectors_read
