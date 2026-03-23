@@ -6,6 +6,15 @@ class TextStyle:
         self.style = style
         self.bar_width= bar_width
 
+def time_formatter(sec:float) -> str:
+    """
+    Formats process up time to HH:MM:SS
+    """
+    sec= int(sec)
+    h, remainder = divmod(sec, 3600)
+    m, s = divmod(remainder, 60)
+    return f"{h:02}:{m:02}:{s:02}"
+
 class PressureFormatter:
     """
     Formats text and decides the state (0=good, 1=warning, 2=critical, 3=muted, 4=blue) for:
@@ -92,13 +101,13 @@ class PressureFormatter:
             cpu_avg300_state= 2
 
 
-        cpu_formatted_output[0].value = f"{cpu_avg10:<5.5}"
+        cpu_formatted_output[0].value = f"{cpu_avg10:<5}"
         cpu_formatted_output[0].style = cpu_avg10_state
-        cpu_formatted_output[1].value = f"{cpu_avg60:<5.5}"
+        cpu_formatted_output[1].value = f"{cpu_avg60:<5}"
         cpu_formatted_output[1].style = cpu_avg60_state
-        cpu_formatted_output[2].value = f"{cpu_avg300:<5.5}"
+        cpu_formatted_output[2].value = f"{cpu_avg300:<5}"
         cpu_formatted_output[2].style = cpu_avg300_state
-        cpu_formatted_output[3].value= f"{cpu_pressure_health:<5.5}"
+        cpu_formatted_output[3].value= f"{cpu_pressure_health:<5}"
         cpu_formatted_output[3].style= cpu_pressure_health_state
         cpu_formatted_output[4].bar_width= cpu_pressure_bar_width
         cpu_formatted_output[4].style= cpu_pressure_bar_state
@@ -189,19 +198,19 @@ class PressureFormatter:
             mem_score_state= 2
             mem_bar_state= 2
 
-        memory_formatted_output[0].value= f"{some_avg10:<5.5}"
+        memory_formatted_output[0].value= f"{some_avg10:<5}"
         memory_formatted_output[0].style= some_avg10_state
-        memory_formatted_output[1].value= f"{some_avg60:<5.5}"
+        memory_formatted_output[1].value= f"{some_avg60:<5}"
         memory_formatted_output[1].style= some_avg60_state
-        memory_formatted_output[2].value= f"{some_avg300:<5.5}"
+        memory_formatted_output[2].value= f"{some_avg300:<5}"
         memory_formatted_output[2].style= some_avg300_state
-        memory_formatted_output[3].value= f"{full_avg10:<5.5}"
+        memory_formatted_output[3].value= f"{full_avg10:<5}"
         memory_formatted_output[3].style= full_avg10_state
-        memory_formatted_output[4].value= f"{full_avg60:<5.5}"
+        memory_formatted_output[4].value= f"{full_avg60:<5}"
         memory_formatted_output[4].style= full_avg60_state
-        memory_formatted_output[5].value= f"{full_avg300:<5.5}"
+        memory_formatted_output[5].value= f"{full_avg300:<5}"
         memory_formatted_output[5].style= full_avg300_state
-        memory_formatted_output[6].value= f"{memory_health[0]:<5.5}"
+        memory_formatted_output[6].value= f"{memory_health[0]:<5}"
         memory_formatted_output[6].style= mem_score_state
         memory_formatted_output[7].bar_width= memory_health[1]
         memory_formatted_output[7].style= mem_bar_state
@@ -599,4 +608,74 @@ class NvidiaFormatter:
             formatted_nvidia_output[6].bar_width= gpu_load_bar_width
             formatted_nvidia_output[6].style= formatted_gpu_load_attr
 
-# class ProcessFormatter:
+class ProcessFormatter:
+    __slots__ = ("formatted_processes_output",)
+
+    def __init__(self):
+        self.formatted_processes_output = []
+
+    def format(self, processes_readings, schedule):
+        if not schedule["processes"]:
+            return
+
+        out = self.formatted_processes_output
+        processes = processes_readings.process_list
+        usernames = processes_readings.user_list
+        current_users = set(processes_readings.current_user)
+
+        # Trim excess rows
+        if len(out) > len(processes):
+            del out[len(processes):]
+
+        for idx, (pid, process) in enumerate(processes.items()):
+
+            if idx >= len(out):
+                out.append([None] * 21)
+
+            row = out[idx]
+            proc_user = usernames[process.uid]
+
+            row[0] = format(pid, "<10")
+            row[1] = 0
+
+            row[2] = format(process.ppid, "<10")
+            row[3] = 5
+
+            row[4] = format(proc_user, "<14.14")
+            row[5] = 3 if proc_user in current_users else (0 if proc_user == "root" else 5)
+
+            if process.priority > 0:
+                row[6] = format(process.priority, "<3")
+            else:
+                row[6] = format(process.priority, "<4")
+            row[7] = 3
+
+            row[8] = f" {process.state} "
+            row[9] = 0
+
+            row[10] = time_formatter(process.process_up_time)
+            row[11] = 0
+
+            row[12] = format(process.threads, "<3")
+            row[13] = 0
+
+            cpu = process.cpu_load
+            row[14] = format(cpu, "<4")
+            row[15] = 0 if cpu < 50 else 1 if cpu < 80 else 2
+
+            if process.vsize > 1024:
+                row[16] = f"{(process.vsize // 1024) * 1.048576:<10.0f} GB"
+            else:
+                row[16] = f"{process.vsize * 1.048576:<10.0f} MB"
+            row[17] = 0
+
+            if process.rss > 1024:
+                row[18] = f"{(process.rss // 1024) * 1.048576:<10.0f} GB"
+            else:
+                row[18] = f"{process.rss * 1.048576:<10.0f} MB"
+            row[19] = 0
+
+            row[20] = format(process.name, "<50.50")
+
+
+            
