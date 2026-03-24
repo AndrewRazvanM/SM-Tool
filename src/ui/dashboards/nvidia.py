@@ -27,7 +27,7 @@ class NvidiaDashboard:
 
         self.window_max_columns= window_max_columns - 1  - self.start_x#leaves space for edge
         #if there's noe enough vertical space, disable it. +3 leaves space for the tytle
-        if window_max_lines > 13 + self.start_y and window_max_columns > 50 + self.start_x:
+        if window_max_lines >= 13 + self.start_y and window_max_columns > 50 + self.start_x:
             self.__dashboard_disabled= False
         else:
             self.__dashboard_disabled= True
@@ -44,7 +44,7 @@ class NvidiaDashboard:
         self.nvidia_dashboard= stdscr
         window_max_lines, window_max_columns= stdscr.getmaxyx()
 
-        if window_max_lines > 13 + self.start_y and window_max_columns > 50 + self.start_x:
+        if window_max_lines >= 13 + self.start_y and window_max_columns > 50 + self.start_x:
             self.__dashboard_disabled= False
             self.__nvidia_content_list.force_write= True
         else:

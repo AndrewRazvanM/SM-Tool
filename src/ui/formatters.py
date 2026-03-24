@@ -656,7 +656,7 @@ class ProcessFormatter:
             row[10] = time_formatter(process.process_up_time)
             row[11] = 0
 
-            row[12] = format(process.threads, "<3")
+            row[12] = format(process.num_threads, "<3")
             row[13] = 0
 
             cpu = process.cpu_load

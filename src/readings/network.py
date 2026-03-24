@@ -144,5 +144,4 @@ class NetworkTraffic:
             
         removed_networks= raw_readings.keys() - current_networks.keys()
         for to_delete in removed_networks:
-            del raw_readings[to_delete]
-            
+            del raw_readings[to_delete]            

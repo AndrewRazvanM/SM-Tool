@@ -12,7 +12,7 @@ class CPUDashboard:
         "__cpu_pressure_content_diff",
         "__dashboard_disabled",
         "__cpu_name",
-        "__sensor_name"
+        "__sensor_name",
     )
 
     def __init__(self, stdscr: curses.window, content_diff_engine: object, cpu_name: str, sensor_name: str) -> object:
@@ -203,7 +203,8 @@ class CPULoadDashboard:
         "__cpu_load_content_list",
         "max_bar_width",
         "__cpu_load_positions",
-        "__dashboard_disabled"
+        "__dashboard_disabled",
+        "window_end_line"
     )
 
     def __init__(self, stdscr: curses.window, formatted_content_list: object, nr_of_threads: int) -> object:
@@ -218,13 +219,20 @@ class CPULoadDashboard:
         #max text width
         window_max_lines, window_max_columns= stdscr.getmaxyx()
 
-        self.window_max_columns= window_max_columns - 1  - self.start_x#leaves space for edge
-        self.window_max_lines= min(24, window_max_lines - self.start_y) #leaves space for the CPU Dashboard and Processes Dashboard
-        #if there's noe enough vertical space, disable it. +3 leaves space for the tytle
-        if window_max_lines < self.start_y + 3:
+        self.window_max_columns= window_max_columns - 1  - self.start_x #leaves space for edge
+        max_lines= self.window_max_lines= min(24, window_max_lines - self.start_y) #leaves space for the CPU Dashboard and Processes Dashboard
+
+        #if there's not enough vertical space, disable it. 
+        if window_max_lines < self.start_y + 4: #space for the header
             self.__dashboard_disabled= True
+            self.window_end_line= 0
+            
         else:
             self.__dashboard_disabled= False
+            if max_lines < self.start_y + 4: #space for the header
+                self.window_end_line= max_lines - 4 #remove space for header
+            else:
+                self.window_end_line= max_lines
 
         self.__cpu_load_content_list= formatted_content_list
 
@@ -240,13 +248,19 @@ class CPULoadDashboard:
 
         start_y= self.start_y
 
-        self.window_max_lines= min(24, window_max_lines  - start_y) #leaves space for the CPU Dashboard and process window
+        max_lines= self.window_max_lines= min(24, window_max_lines  - start_y) #leaves space for the CPU Dashboard and process window
         self.window_max_columns= window_max_columns - 1 - self.start_x
 
-        if window_max_lines < start_y + 3:
+        if window_max_lines < start_y + 4:
             self.__dashboard_disabled= True
+            self.window_end_line= 0
+
         else:
             self.__dashboard_disabled= False
+            if max_lines < self.start_y + 4: #space for the header
+                self.window_end_line= self.window_max_lines - 4 #remove space for header title
+            else:
+                self.window_end_line=self.window_max_lines
 
         self.draw_static_interface()
 

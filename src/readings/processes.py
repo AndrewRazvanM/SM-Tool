@@ -88,12 +88,10 @@ class ProcessMonitor:
             with open(path) as f:
                 for line in f:
                     username_object= SystemUsername(line)
-                    username_data[username_object.UID]= username_object.name
+                    username_data[int(username_object.UID)]= username_object.name
 
         except FileNotFoundError:
-            username_data={
-                "0": "root"
-            }
+            username_data[0]= "root"
         
         try:
             for uid in scandir(current_user_path):

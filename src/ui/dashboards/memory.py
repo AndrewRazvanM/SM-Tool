@@ -23,7 +23,7 @@ class MemoryDashboard:
         self.__mem_pressure_content_diff= content_diff_engine()
 
         window_max_lines, window_max_columns= stdscr.getmaxyx()
-        if window_max_lines >= 10 + self.start_y and window_max_columns >= 51 + self.start_x:
+        if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
             self.__dashboard_disabled= False
         else:
             self.__dashboard_disabled= True
@@ -38,7 +38,7 @@ class MemoryDashboard:
         self.memory_dashboard= stdscr
         window_max_lines, window_max_columns= stdscr.getmaxyx()
 
-        if window_max_lines >= 10 + self.start_y and window_max_columns >= 51 + self.start_x:
+        if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
             self.__dashboard_disabled= False
             self.draw_static_interface()
             self.__mem_info_content_diff.force_write= True
