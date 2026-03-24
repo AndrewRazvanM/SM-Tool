@@ -78,7 +78,7 @@ class Application:
 
         #cpu load dashboard
         self.cpu_load_dashboard= cpu.CPULoadDashboard(stdscr, self.cpu_formatter, len(self.cpu_service.cpu_load_raw_data))
-        processes_start_y= self.cpu_load_dashboard.start_y + self.cpu_load_dashboard.window_end_line
+        processes_start_y= self.cpu_dashboard.last_line_y + self.cpu_load_dashboard.last_line_y
 
         #for network dashboard
         self.network_service= reading_net.NetworkTraffic(self.files_path)
@@ -109,9 +109,6 @@ class Application:
                     
             if key == curses.KEY_DOWN:
                 self.scroll_pos -= 1
-
-            if key == -1:
-                break  # no key
             
             if key == curses.KEY_RESIZE:
                 stdscr= self.stdscr
@@ -120,7 +117,7 @@ class Application:
                 self.cpu_dashboard.resize(stdscr)
     
                 self.cpu_load_dashboard.resize(stdscr)
-                processes_start_y= self.cpu_load_dashboard.start_y + self.cpu_load_dashboard.window_end_line
+                processes_start_y= self.cpu_dashboard.last_line_y + self.cpu_load_dashboard.last_line_y
 
                 self.network_dashboard.resize(stdscr)
                 self.nvidia_dashboard.resize(stdscr)
@@ -132,6 +129,9 @@ class Application:
                 self.files_path.close_all()
                 self.cpu_service.close_temp_files()
                 self.nvidia_services.close_nvidia_drivers()
+
+            if key == -1:
+                break  # no key
 
     def run(self):
         #create local references

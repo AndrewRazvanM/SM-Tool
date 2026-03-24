@@ -94,8 +94,8 @@ class ProcessMonitor:
             username_data[0]= "root"
         
         try:
-            for uid in scandir(current_user_path):
-                current_user_data[uid]= True
+            for username in scandir(current_user_path):
+                current_user_data[username]= True
         
         except FileNotFoundError:
             pass

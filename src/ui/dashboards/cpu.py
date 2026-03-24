@@ -13,6 +13,7 @@ class CPUDashboard:
         "__dashboard_disabled",
         "__cpu_name",
         "__sensor_name",
+        "last_line_y"
     )
 
     def __init__(self, stdscr: curses.window, content_diff_engine: object, cpu_name: str, sensor_name: str) -> object:
@@ -27,8 +28,10 @@ class CPUDashboard:
         #if window is too small, disables the dashboard
         if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
             self.__dashboard_disabled= False
+            self.last_line_y= 13
         else:
             self.__dashboard_disabled= True
+            self.last_line_y= 3
 
         self.__cpu_info_content_diff= content_diff_engine()
         self.__cpu_pressure_content_diff= content_diff_engine()
@@ -43,11 +46,15 @@ class CPUDashboard:
         if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
             self.__dashboard_disabled= False
             self.draw_static_interface()
+            
+            self.last_line_y= 13
+
             self.__cpu_info_content_diff.force_write= True
             self.__cpu_pressure_content_diff.force_write= True
 
         else:
             self.__dashboard_disabled= True
+            self.last_line_y= 0
     
     def assing_style(self):
         from .style_maps import text_map, bar_map
@@ -204,7 +211,7 @@ class CPULoadDashboard:
         "max_bar_width",
         "__cpu_load_positions",
         "__dashboard_disabled",
-        "window_end_line"
+        "last_line_y"
     )
 
     def __init__(self, stdscr: curses.window, formatted_content_list: object, nr_of_threads: int) -> object:
@@ -225,14 +232,11 @@ class CPULoadDashboard:
         #if there's not enough vertical space, disable it. 
         if window_max_lines < self.start_y + 4: #space for the header
             self.__dashboard_disabled= True
-            self.window_end_line= 0
+            self.last_line_y= 0
             
         else:
             self.__dashboard_disabled= False
-            if max_lines < self.start_y + 4: #space for the header
-                self.window_end_line= max_lines - 4 #remove space for header
-            else:
-                self.window_end_line= max_lines
+            self.last_line_y= max_lines - 4 #remove space for header title
 
         self.__cpu_load_content_list= formatted_content_list
 
@@ -253,14 +257,12 @@ class CPULoadDashboard:
 
         if window_max_lines < start_y + 4:
             self.__dashboard_disabled= True
-            self.window_end_line= 0
+            self.last_line_y= 0
 
         else:
             self.__dashboard_disabled= False
-            if max_lines < self.start_y + 4: #space for the header
-                self.window_end_line= self.window_max_lines - 4 #remove space for header title
-            else:
-                self.window_end_line=self.window_max_lines
+            self.last_line_y= max_lines - 4 #remove space for header title
+            
 
         self.draw_static_interface()
 

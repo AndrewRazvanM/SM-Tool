@@ -13,7 +13,7 @@ def time_formatter(sec:float) -> str:
     sec= int(sec)
     h, remainder = divmod(sec, 3600)
     m, s = divmod(remainder, 60)
-    return f"{h:02}:{m:02}:{s:02}"
+    return f" {h:02}:{m:02}:{s:02} "
 
 class PressureFormatter:
     """
@@ -630,52 +630,39 @@ class ProcessFormatter:
         for idx, (pid, process) in enumerate(processes.items()):
 
             if idx >= len(out):
-                out.append([None] * 21)
+                out.append([None] * 11)
 
             row = out[idx]
             proc_user = usernames[process.uid]
 
-            row[0] = format(pid, "<10")
-            row[1] = 0
+            row[0] = (format(pid, "<10"), 0)
 
-            row[2] = format(process.ppid, "<10")
-            row[3] = 5
+            row[1] = (format(process.ppid, "<10"), 5)
 
-            row[4] = format(proc_user, "<14.14")
-            row[5] = 3 if proc_user in current_users else (0 if proc_user == "root" else 5)
+            row[2] = (format(proc_user, "<16.16"), 0 if proc_user in current_users else (5 if proc_user == "root" else 3))
 
-            if process.priority > 0:
-                row[6] = format(process.priority, "<3")
-            else:
-                row[6] = format(process.priority, "<4")
-            row[7] = 3
+            row[3] = (format(process.priority, "<9"), 3)
 
-            row[8] = f" {process.state} "
-            row[9] = 0
+            row[4] = (format(process.state, "<7"), 0)
 
-            row[10] = time_formatter(process.process_up_time)
-            row[11] = 0
+            row[5] = (time_formatter(process.process_up_time), 0)
 
-            row[12] = format(process.num_threads, "<3")
-            row[13] = 0
+            row[6] = (format(process.num_threads, "<9"), 0)
 
             cpu = process.cpu_load
-            row[14] = format(cpu, "<4")
-            row[15] = 0 if cpu < 50 else 1 if cpu < 80 else 2
+            row[7] = (format(cpu, "<6"), 0 if cpu < 50 else 1 if cpu < 80 else 2)
 
             if process.vsize > 1024:
-                row[16] = f"{(process.vsize // 1024) * 1.048576:<10.0f} GB"
+                row[8] = (f"{(process.vsize // 1024) * 1.048576:<10.0f} GB", 0)
             else:
-                row[16] = f"{process.vsize * 1.048576:<10.0f} MB"
-            row[17] = 0
+                row[8] = (f"{process.vsize * 1.048576:<10.0f} MB", 0)
 
             if process.rss > 1024:
-                row[18] = f"{(process.rss // 1024) * 1.048576:<10.0f} GB"
+                row[9] = (f"{(process.rss // 1024) * 1.048576:<10.0f} GB", 0)
             else:
-                row[18] = f"{process.rss * 1.048576:<10.0f} MB"
-            row[19] = 0
+                row[9] = (f"{process.rss * 1.048576:<10.0f} MB", 0)
 
-            row[20] = format(process.name, "<50.50")
+            row[10] = (format(process.name, "<50"), 4)
 
 
             

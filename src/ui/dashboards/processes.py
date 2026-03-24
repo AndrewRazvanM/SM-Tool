@@ -13,6 +13,7 @@ class ProcessDashboard:
         "bar_map",
         "__sorted_process_content_list",
         "__dashboard_disabled",
+        "__widths",
     )
 
     def __init__(self, stdscr: curses.window, cpu_load_max_y: int) -> object:
@@ -30,6 +31,20 @@ class ProcessDashboard:
             self.__dashboard_disabled= False
         else:
             self.__dashboard_disabled= True
+
+        self.__widths = [
+            10,   # PID
+            10,   # PPID
+            16,  # RunningUnder
+            9,   # Priority
+            7,   # State
+            10,  # UpTime
+            9,   # Threads
+            6,   # Cpu %
+            10,  # VirtMem
+            10,  # Memory
+            0,   # Name (0 means no truncation / rest of line)
+        ]
 
     def assing_style(self):
         from .style_maps import text_map, bar_map
@@ -70,18 +85,7 @@ class ProcessDashboard:
         start_y = self.start_y
 
         # Column widths 
-        widths = (
-            7,   # PID
-            7,   # PPID
-            14,  # RunningUnder
-            9,   # Priority
-            7,   # State
-            10,  # UpTime
-            9,   # Threads
-            10,  # VirtMem
-            10,  # Memory
-            0,   # Name (0 means no truncation / rest of line)
-        )
+        __widths= self.__widths
 
         headers = (
             "PID",
@@ -91,6 +95,7 @@ class ProcessDashboard:
             "State",
             "UpTime",
             "Threads",
+            "CPU %",
             "VirtMem",
             "Memory",
             "Name",
@@ -98,7 +103,7 @@ class ProcessDashboard:
 
         # Build format string dynamically
         fmt_parts = []
-        for w in widths[:-1]:
+        for w in __widths[:-1]:
             fmt_parts.append(f"{{:<{w}}}")
         fmt_parts.append(f"{{:<{self.window_max_columns}}}")  # last column expands
 
@@ -112,3 +117,33 @@ class ProcessDashboard:
 
         if self.__dashboard_disabled:
             return
+        
+        start_y= self.start_y + 1 #leave space for header
+
+        window_max_columns= self.window_max_columns - 2
+        __widths= self.__widths
+
+        style_map= self.style_map
+
+        __sorted_process_content_list= self.__sorted_process_content_list
+        process_dashboard= self.process_dashboard
+
+        for row_idx, process in enumerate(__sorted_process_content_list):
+            text, style= process[0]
+            attr= style_map[style]
+
+            column_width= __widths[0]
+
+            process_dashboard.addnstr(start_y + row_idx, 0, text, window_max_columns - column_width, attr)
+            
+            for col in range(1, 11):
+                reading, style = process[col]
+                
+                column_width += __widths[col]
+                max_col_width= window_max_columns - column_width
+
+                if max_col_width < 1:
+                    continue
+
+                attr= style_map[style]
+                process_dashboard.addnstr(reading, max_col_width, attr)
