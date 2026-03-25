@@ -106,12 +106,12 @@ class Application:
             window_max_lines, _ = stdscr.getmaxyx()
 
             if key == curses.KEY_UP:
-                self.scroll_pos += 1
-                self.scroll_pos= min(self.scroll_pos, window_max_lines)
-                    
-            if key == curses.KEY_DOWN:
                 self.scroll_pos -= 1
                 self.scroll_pos= max(0, self.scroll_pos)
+                    
+            if key == curses.KEY_DOWN:
+                self.scroll_pos += 1
+                self.scroll_pos= min(self.scroll_pos, window_max_lines)
             
             if key == curses.KEY_RESIZE:
                 stdscr= self.stdscr
