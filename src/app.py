@@ -204,6 +204,9 @@ class Application:
             process_services.update(schedule)
             nvidia_services.get_nvidia_gpu_readings(schedule)
 
+            #sort raw lists for the process window
+            sort(process_services, schedule)
+
             #format system readings
             mem_formatter.format(mem_service, schedule)
             pressure_formatter.format_mem(pressure_service, schedule)
@@ -213,9 +216,6 @@ class Application:
             network_formatter.format(network_service, schedule)
             nvidia_formatter.format(nvidia_services, schedule)
             process_formatter.format(process_services, schedule)
-
-            #sort formatted lists for the process window
-            sort(process_formatter.formatted_processes_output, schedule)
 
             #check if content is different. excludes the CPU Load Dashboard and Processes Dashboard
             mem_dashboard.check_content_diff(mem_formatter.memory_info_formatted_output, pressure_formatter.memory_formatted_output)

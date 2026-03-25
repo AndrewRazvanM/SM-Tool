@@ -1,3 +1,4 @@
-def sorter(formatted_readings: list, schedule: dict) -> list:
+def sorter(raw_readings: object, schedule: dict) -> list:
+
     if schedule["processes"]:
-        formatted_readings.sort(key=lambda row: row[7], reverse=True)
+        raw_readings.process_list = dict(sorted(raw_readings.process_list.items(), key=lambda item: item[1].cpu_load, reverse=True))
