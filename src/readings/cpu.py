@@ -14,6 +14,10 @@ class CPUFan:
         file_read= os_pread(self.fan_file, 16, 0)
         self.rpm= int(file_read)
 
+    def close(self):
+        os_close(self.fan_file)
+
+
 class CPUTemp:
     __slots__= (
         "temp_file",
@@ -146,8 +150,8 @@ class CPUInfo:
                         if file_name.endswith("input"):
                             file_path= hwon_folder.path
                             temp_file_descriptor= os_open(file_path, os_O_RDONLY)
-                            temp_file= os_pread(temp_file_descriptor, 16, 0)
-                            temperature= int(temp_file)
+                            temp_bytes= os_pread(temp_file_descriptor, 16, 0)
+                            temperature= int(temp_bytes)
 
                             file_label_path= file_path[:-5] + "label"
                             try:
@@ -166,8 +170,9 @@ class CPUInfo:
                     elif file_name.startswith("fan"):
                         if file_name.endswith("input"):
                             fan_file_path= hwon_folder.path
-                            fan_file= os_open(fan_file_path, os_O_RDONLY)
-                            fan_rpm= fan_file.read().strip()
+                            fan_file_descriptor= os_open(fan_file_path, os_O_RDONLY)
+                            fan_bytes= os_pread(fan_file_descriptor, 16, 0)
+                            fan_rpm= int(fan_bytes.strip())
 
                             fan_file_label_path= fan_file_path[:-5] + "label"
                                 
@@ -178,8 +183,7 @@ class CPUInfo:
                             except FileNotFoundError:
                                 fan_label+= 1
 
-                            fan_readings= CPUFan(fan_rpm, fan_file)
-                            cpu_fan[fan_label]= fan_readings
+                            cpu_fan[fan_label]= CPUFan(fan_rpm, fan_rpm)
 
                 average_temp= average_temp//temp_index
                 cpu_temp["Average"]= average_temp

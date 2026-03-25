@@ -634,45 +634,43 @@ class ProcessFormatter:
 
             row = out[idx]
             proc_user = usernames[process.uid]
+                        
+            row[0].value = f"{pid:<10}"
+            row[0].style = 0
 
-            row[0].value = format(pid, "<10")
-            row[0].style= 0
+            row[1].value = f"{process.ppid:<10}"
+            row[1].style = 5
 
-            row[1].value = format(process.ppid, "<10")
-            row[1].style= 5
-
-            row[2].value = format(proc_user, "<16.16")
+            row[2].value = f"{proc_user:<16.16}"
             row[2].style = 0 if proc_user in current_users else (5 if proc_user == "root" else 3)
 
-            row[3].value = format(process.priority, "<9") 
+            row[3].value = f"{process.priority:<9}"
             row[3].style = 3
 
-            row[4].value = format(process.state, "<7")
+            row[4].value = f"{process.state:<7}"
             row[4].style = 0
 
             row[5].value = time_formatter(process.process_up_time)
             row[5].style = 0
 
-            row[6].value = format(process.num_threads, "<9")
+            row[6].value = f"{process.num_threads:<9}"
             row[6].style = 0
 
             cpu = process.cpu_load
-            row[7].value = format(cpu, "<6.6")
+            row[7].value = f"{cpu:<6.6}"
             row[7].style = 0 if cpu < 50 else 1 if cpu < 80 else 2
 
             if process.vsize > 1024:
-                row[8].value = f"{(process.vsize // 1024) * 1.048576:<1.0f} {"GB":<6}"
+                row[8].value = f"{(process.vsize // 1024) * 1.048576:<1.0f} {'GB':<6}"
             else:
-                row[8].value = f"{process.vsize * 1.048576:<1.0f} {"MB":<6}"
-
-            row[8].style= 0
+                row[8].value = f"{process.vsize * 1.048576:<1.0f} {'MB':<6}"
+            row[8].style = 0
 
             if process.rss > 1024:
-                row[9].value = f"{(process.rss // 1024) * 1.048576:<1.0f} {"GB":<6}"
+                row[9].value = f"{(process.rss // 1024) * 1.048576:<1.0f} {'GB':<6}"
             else:
-                row[9].value = f"{process.rss * 1.048576:<1.0f} {"MB":<6}"
+                row[9].value = f"{process.rss * 1.048576:<1.0f} {'MB':<6}"
+            row[9].style = 0
 
-            row[9].style= 0
-
-            row[10].value = format(process.name, "<50")
-            row[10].style= 4
+            row[10].value = f"{process.name:<50}"
+            row[10].style = 4
