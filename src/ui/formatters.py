@@ -13,7 +13,7 @@ def time_formatter(sec:float) -> str:
     sec= int(sec)
     h, remainder = divmod(sec, 3600)
     m, s = divmod(remainder, 60)
-    return f" {h:02}:{m:02}:{s:02} "
+    return f"{h:02}:{m:02}:{s:02} "
 
 class PressureFormatter:
     """
@@ -609,7 +609,7 @@ class NvidiaFormatter:
             formatted_nvidia_output[6].style= formatted_gpu_load_attr
 
 class ProcessFormatter:
-    __slots__ = ("formatted_processes_output",)
+    __slots__ = ("formatted_processes_output")
 
     def __init__(self):
         self.formatted_processes_output = []
@@ -630,39 +630,49 @@ class ProcessFormatter:
         for idx, (pid, process) in enumerate(processes.items()):
 
             if idx >= len(out):
-                out.append([None] * 11)
+                out.append([TextStyle("N/A", 3) for _ in range(11)])
 
             row = out[idx]
             proc_user = usernames[process.uid]
 
-            row[0] = (format(pid, "<10"), 0)
+            row[0].value = format(pid, "<10")
+            row[0].style= 0
 
-            row[1] = (format(process.ppid, "<10"), 5)
+            row[1].value = format(process.ppid, "<10")
+            row[1].style= 5
 
-            row[2] = (format(proc_user, "<16.16"), 0 if proc_user in current_users else (5 if proc_user == "root" else 3))
+            row[2].value = format(proc_user, "<16.16")
+            row[2].style = 0 if proc_user in current_users else (5 if proc_user == "root" else 3)
 
-            row[3] = (format(process.priority, "<9"), 3)
+            row[3].value = format(process.priority, "<9") 
+            row[3].style = 3
 
-            row[4] = (format(process.state, "<7"), 0)
+            row[4].value = format(process.state, "<7")
+            row[4].style = 0
 
-            row[5] = (time_formatter(process.process_up_time), 0)
+            row[5].value = time_formatter(process.process_up_time)
+            row[5].style = 0
 
-            row[6] = (format(process.num_threads, "<9"), 0)
+            row[6].value = format(process.num_threads, "<9")
+            row[6].style = 0
 
             cpu = process.cpu_load
-            row[7] = (format(cpu, "<6"), 0 if cpu < 50 else 1 if cpu < 80 else 2)
+            row[7].value = format(cpu, "<6.6")
+            row[7].style = 0 if cpu < 50 else 1 if cpu < 80 else 2
 
             if process.vsize > 1024:
-                row[8] = (f"{(process.vsize // 1024) * 1.048576:<10.0f} GB", 0)
+                row[8].value = f"{(process.vsize // 1024) * 1.048576:<1.0f} {"GB":<6}"
             else:
-                row[8] = (f"{process.vsize * 1.048576:<10.0f} MB", 0)
+                row[8].value = f"{process.vsize * 1.048576:<1.0f} {"MB":<6}"
+
+            row[8].style= 0
 
             if process.rss > 1024:
-                row[9] = (f"{(process.rss // 1024) * 1.048576:<10.0f} GB", 0)
+                row[9].value = f"{(process.rss // 1024) * 1.048576:<1.0f} {"GB":<6}"
             else:
-                row[9] = (f"{process.rss * 1.048576:<10.0f} MB", 0)
+                row[9].value = f"{process.rss * 1.048576:<1.0f} {"MB":<6}"
 
-            row[10] = (format(process.name, "<50"), 4)
+            row[9].style= 0
 
-
-            
+            row[10].value = format(process.name, "<50")
+            row[10].style= 4

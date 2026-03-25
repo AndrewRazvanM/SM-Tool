@@ -94,8 +94,9 @@ class ProcessMonitor:
             username_data[0]= "root"
         
         try:
-            for username in scandir(current_user_path):
-                current_user_data[username]= True
+            for username_folder in scandir(current_user_path):
+                username_string= username_data[int(username_folder.name)]
+                current_user_data[username_string]= True
         
         except FileNotFoundError:
             pass
@@ -114,15 +115,16 @@ class ProcessMonitor:
         sys_up_time= self._get_system_uptime()
 
         for proc_folder_path in scandir(self.__proc_path):
-            if data_length_index < data_length:
-                data_length_index+= 1
-            else:
-                break
             
             pid_proc_path= proc_folder_path.path
             pid_proc_string= proc_folder_path.name
             if not pid_proc_string.isdigit():
                     continue  
+            
+            if data_length_index < data_length:
+                data_length_index+= 1
+            else:
+                break
                 
             PID= int(pid_proc_string)
             current_pids.add(PID)
