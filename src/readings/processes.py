@@ -33,7 +33,7 @@ class ProcessInfo:
         self.num_threads = 0
         self.vsize = 0
         self.rss = 0
-        self.starttime = int(starttime)
+        self.starttime = starttime
         self.priority= 0
 
 class SystemUsername:

@@ -2,6 +2,7 @@ import curses
 from readings.processes import ProcessMonitor
 from ui.formatters import ProcessFormatter
 from core.sorter import sorter
+from ui.contentdiff import ScrollWinContentDiff
 
 class ProcessDashboard:
 
@@ -17,6 +18,7 @@ class ProcessDashboard:
         "__sorted_process_content_list",
         "__dashboard_disabled",
         "__widths",
+        "content_diff",
         "positions_list",
         "process_list",
         "process_services",
@@ -28,6 +30,7 @@ class ProcessDashboard:
         self.process_dashboard = stdscr
         self.process_services= ProcessMonitor(file_path)
         self.process_formatter= ProcessFormatter()
+        self.content_diff= ScrollWinContentDiff()
         self.sorter= sorter
         self.process_list= {}
         
@@ -71,7 +74,7 @@ class ProcessDashboard:
 
     def resize(self, stdscr: curses.window, cpu_load_max_y: int):
         self.process_dashboard= stdscr
-        self.start_y= cpu_load_max_y + 2
+        self.start_y= cpu_load_max_y + 1
 
         window_max_lines, self.window_max_columns= stdscr.getmaxyx()
         self.window_max_lines= max(0, window_max_lines - 1 - self.start_y)
@@ -91,6 +94,8 @@ class ProcessDashboard:
             scroll_pos= list_length
 
         self.__sorted_process_content_list= process_list[scroll_pos: scroll_pos + self.window_max_lines]
+
+        self.content_diff.check_differences(self.__sorted_process_content_list)
 
         return scroll_pos
 
@@ -152,21 +157,37 @@ class ProcessDashboard:
 
         style_map= self.style_map
 
-        __sorted_process_content_list= self.__sorted_process_content_list
+        content= self.content_diff.is_content_diff
         process_dashboard= self.process_dashboard
 
-        for row_idx, process in enumerate(__sorted_process_content_list):
+        for row_idx, process_obj in enumerate(content):
+            process_row= process_obj.row_content
 
-            attr= style_map[process[0].style]
+            if process_obj.row_changed:
 
-            process_dashboard.addnstr(start_y + row_idx, 0, process[0].value, window_max_columns, attr)
-            
-            for col in range(0, 10):
-                col_position= positions_list[col]
+                attr= style_map[process_row[0].style]
+                process_dashboard.addnstr(start_y + row_idx, 0, process_row[0].value, window_max_columns, attr)
+                
+                for col in range(0, 10):
+                    col_position= positions_list[col]
 
-                max_col_width= window_max_columns - col_position
-                if max_col_width < 1:
-                    break
+                    max_col_width= window_max_columns - col_position
+                    if max_col_width < 1:
+                        break
 
-                attr= style_map[process[col + 1].style]
-                process_dashboard.addnstr(start_y + row_idx, col_position, process[col + 1].value, max_col_width, attr)
+                    attr= style_map[process_row[col + 1].style]
+                    process_dashboard.addnstr(start_y + row_idx, col_position, process_row[col + 1].value, max_col_width, attr)
+
+            elif process_obj.row_update_values:
+
+                cpu= process_row[7].value
+                cpu_style= process_row[7].style
+                cpu_col_position= positions_list[6]
+                cpu_max_width= window_max_columns - cpu_col_position
+
+                if cpu_max_width >= 1:
+                
+                    attr= style_map[cpu_style]
+                    process_dashboard.addnstr(start_y + row_idx, cpu_col_position, cpu, cpu_max_width, attr)
+
+                
