@@ -1,4 +1,4 @@
-Real-time system monitoring tool written in Python with a TUI (curses-based like htop). Intended to have a simple layout and provide all the system monitoring needs a user has. Does not yet have the capability to kill/stop or search processes.
+Real-time system monitoring tool written in Python with a TUI (curses-based like htop). Intended to have a simple layout and provide all the system monitoring needs a user has. 
 
 Currently implemented:
 - Reads live kernel telemetry from /proc
@@ -21,6 +21,7 @@ To be implemented:
 - I/O monitoring
 - AMD graphic card monitoring
 - Process management (search, kill/stop)
+- config file + options
 
 Current dependencies:
 - nvidia-ml-py
@@ -28,3 +29,5 @@ Current dependencies:
 To build the app, you need to run the one of the commands below in the terminal:
 - pip install -e ./SM-Tool
    - this needs to be ran from the folder where the app was donloaded
+
+Tool was tested on a machine with ~30.000 (dummy) processes and still remained responsive.

@@ -101,7 +101,8 @@ class ProcessMonitor:
 
         return username_data, current_user_data
 
-    def update(self, schedule: dict, process_list: dict, data_length=1000) -> dict:
+    #tested with 30.000 dummy processes on my machine. So that data_length should be fine. Could probably scale up to 40-50.000 processes
+    def update(self, schedule: dict, process_list: dict, data_length=30000) -> dict: 
         if schedule["processes"] is False:
             return
         
