@@ -17,7 +17,6 @@ class ProcessDashboard:
         "bar_map",
         "__sorted_process_content_list",
         "__dashboard_disabled",
-        "__widths",
         "content_diff",
         "positions_list",
         "process_list",
@@ -46,20 +45,6 @@ class ProcessDashboard:
             self.__dashboard_disabled= False
         else:
             self.__dashboard_disabled= True
-
-        self.__widths = [
-            10,   # PID
-            10,   # PPID
-            16,  # RunningUnder
-            9,   # Priority
-            7,   # State
-            10,  # UpTime
-            9,   # Threads
-            6,   # Cpu %
-            10,  # VirtMem
-            10,  # Memory
-            0,   # Name (0 means no truncation / rest of line)
-        ]
 
     def update_data_pipeline(self, schedule):
         self.process_services.update(schedule, self.process_list)
@@ -108,7 +93,20 @@ class ProcessDashboard:
         start_y = self.start_y
 
         # Column widths 
-        __widths= self.__widths
+        __widths = [
+            10,   # PID
+            10,   # PPID
+            16,  # RunningUnder
+            9,   # Priority
+            7,   # State
+            10,  # UpTime
+            9,   # Threads
+            6,   # Cpu %
+            10,  # VirtMem
+            10,  # Memory
+            25,  # Name 
+            0,   # Command (0 means no truncation / rest of line)
+        ]
 
         headers = (
             "PID",
@@ -122,6 +120,7 @@ class ProcessDashboard:
             "VirtMem",
             "Memory",
             "Name",
+            "Command"
         )
         
         #pre-calculate the positions
@@ -148,6 +147,8 @@ class ProcessDashboard:
 
         if self.__dashboard_disabled:
             return
+        
+        highlight_columns= (3, 4, 5, 7, 8, 9)
         
         start_y= self.start_y + 1 #leave space for header
 
@@ -177,62 +178,15 @@ class ProcessDashboard:
 
                     attr= style_map[process_row[col + 1].style]
                     process_dashboard.addnstr(start_y + row_idx, col_position, process_row[col + 1].value, max_col_width, attr)
-
+            #updates only cpu, time, priority, state, virt mem, mem
             elif process_obj.row_update_values:
-
-                cpu= process_row[7].value #updates only cpu
-                style= process_row[7].style
-                col_position= positions_list[6]
-                max_width= window_max_columns - col_position
-                if max_width >= 1:
-                
-                    attr= style_map[style]
-                    process_dashboard.addnstr(start_y + row_idx, col_position, cpu, max_width, attr)
-
-                mem= process_row[9].value #updates only mem
-                style= process_row[9].style
-                col_position= positions_list[8]
-                max_width= window_max_columns - col_position
-                if max_width >=1:
-
-                    attr= style_map[style]
-                    process_dashboard.addnstr(start_y + row_idx, col_position, mem, max_width, attr)
-
-                virt_mem= process_row[8].value #updates only virt mem
-                style= process_row[8].style
-                col_position= positions_list[7]
-                max_width= window_max_columns - col_position
-                if max_width >=1:
-
-                    attr= style_map[style]
-                    process_dashboard.addnstr(start_y + row_idx, col_position, virt_mem, max_width, attr)
-
-                state= process_row[4].value #updates only state
-                style= process_row[4].style
-                col_position= positions_list[3]
-                max_width= window_max_columns - col_position
-                if max_width >=1:
-
-                    attr= style_map[style]
-                    process_dashboard.addnstr(start_y + row_idx, col_position, state, max_width, attr)
-
-                priority= process_row[3].value #updates only priority
-                style= process_row[3].style
-                col_position= positions_list[2]
-                max_width= window_max_columns - col_position
-                if max_width >=1:
-
-                    attr= style_map[style]
-                    process_dashboard.addnstr(start_y + row_idx, col_position, priority, max_width, attr)
-
-                time= process_row[5].value #updates only time
-                style= process_row[5].style
-                col_position= positions_list[4]
-                max_width= window_max_columns - col_position
-                if max_width >=1:
-
-                    attr= style_map[style]
-                    process_dashboard.addnstr(start_y + row_idx, col_position, time, max_width, attr)
-
-
+                for idx in highlight_columns:
+                    text= process_row[idx].value
+                    style= process_row[idx].style
+                    col_position= positions_list[idx - 1]
+                    max_width= window_max_columns - col_position
+                    if max_width >= 1:
+                    
+                        attr= style_map[style]
+                        process_dashboard.addnstr(start_y + row_idx, col_position, text, max_width, attr)
                 
