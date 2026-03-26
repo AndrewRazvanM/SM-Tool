@@ -1,4 +1,7 @@
 import curses
+from readings.processes import ProcessMonitor
+from ui.formatters import ProcessFormatter
+from core.sorter import sorter
 
 class ProcessDashboard:
 
@@ -14,11 +17,19 @@ class ProcessDashboard:
         "__sorted_process_content_list",
         "__dashboard_disabled",
         "__widths",
-        "positions_list"
+        "positions_list",
+        "process_list",
+        "process_services",
+        "process_formatter",
+        "sorter",
     )
 
-    def __init__(self, stdscr: curses.window, cpu_load_max_y: int) -> object:
+    def __init__(self, stdscr: curses.window, cpu_load_max_y: int, file_path: object) -> object:
         self.process_dashboard = stdscr
+        self.process_services= ProcessMonitor(file_path)
+        self.process_formatter= ProcessFormatter()
+        self.sorter= sorter
+        self.process_list= {}
         
         self.start_y= cpu_load_max_y + 2
         self.start_x= 0 #other dashboard column width
@@ -47,6 +58,11 @@ class ProcessDashboard:
             0,   # Name (0 means no truncation / rest of line)
         ]
 
+    def update_data_pipeline(self, schedule):
+        self.process_services.update(schedule, self.process_list)
+        self.sorter(self.process_list, schedule)
+        self.process_formatter.format(self.process_list, self.process_services, schedule)
+
     def assing_style(self):
         from .style_maps import text_map, bar_map
 
@@ -67,13 +83,16 @@ class ProcessDashboard:
 
         self.draw_static_interface()
 
-    def visible_content(self, scroll_pos: int, sorted_process_list: list) -> list:
-        list_length= len(sorted_process_list) - 1
+    def visible_content(self, scroll_pos: int) -> list:
+        process_list= self.process_formatter.formatted_processes_output
+        list_length= len(process_list) - 1
 
         if scroll_pos > list_length:
             scroll_pos= list_length
 
-        self.__sorted_process_content_list= sorted_process_list[scroll_pos: scroll_pos + self.window_max_lines]
+        self.__sorted_process_content_list= process_list[scroll_pos: scroll_pos + self.window_max_lines]
+
+        return scroll_pos
 
     def draw_static_interface(self):
 

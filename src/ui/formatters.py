@@ -614,12 +614,11 @@ class ProcessFormatter:
     def __init__(self):
         self.formatted_processes_output = []
 
-    def format(self, processes_readings, schedule):
+    def format(self, processes: list, processes_readings: object, schedule: dict) -> list:
         if not schedule["processes"]:
             return
 
         out = self.formatted_processes_output
-        processes = processes_readings.process_list
         usernames = processes_readings.user_list
         current_users = set(processes_readings.current_user)
 

@@ -56,7 +56,6 @@ class ProcessMonitor:
         "ticks_per_second",
         "__prev_process_time",
         "__proc_path",
-        "process_list",
         "__sys_up_time_file",
         "user_list",
         "current_user",
@@ -67,7 +66,6 @@ class ProcessMonitor:
         self.ticks_per_second = sysconf(sysconf_names["SC_CLK_TCK"]) #used for process load calculation
         self.__prev_process_time= monotonic()
         self.__proc_path= "/proc"
-        self.process_list= {}
         self.__sys_up_time_file= file_path
         self.user_list, self.current_user= self.__get_process_username()
 
@@ -103,7 +101,7 @@ class ProcessMonitor:
 
         return username_data, current_user_data
 
-    def update(self, schedule, data_length=1000):
+    def update(self, schedule: dict, process_list: dict, data_length=1000) -> dict:
         if schedule["processes"] is False:
             return
         
@@ -157,7 +155,7 @@ class ProcessMonitor:
 
             #scan for process UID only when it's a new process or the process restarted
             uid= None
-            if PID not in self.process_list or self.process_list[PID].starttime != starttime:
+            if PID not in process_list or process_list[PID].starttime != starttime:
                 status_file= pid_proc_path + "/status"
                 try:
                     with open(status_file) as f:
@@ -182,10 +180,10 @@ class ProcessMonitor:
                 process.num_threads= num_threads
                 process.rss = rss
                 process.process_up_time= process_up_time
-                self.process_list[PID] = process
+                process_list[PID] = process
 
             else:
-                process = self.process_list[PID]
+                process = process_list[PID]
                 process.utime = utime
                 process.stime = stime
                 process.vsize = vsize
@@ -203,6 +201,6 @@ class ProcessMonitor:
                 if delta >= 0:  # ignore negative deltas due to PID reuse
                     process.cpu_load = round((delta / self.ticks_per_second / time_delta) * 100, 1)
 
-        dead_processes= self.process_list.keys() - current_pids
+        dead_processes= process_list.keys() - current_pids
         for remove_pid in dead_processes:
-            del self.process_list[remove_pid]
+            del process_list[remove_pid]

@@ -1,4 +1,4 @@
-from core import scheduler, file_handling, sorter
+from core import scheduler, file_handling
 from readings import memory as reading_mem, system_pressure, cpu as reading_cpu, network as reading_net, processes as reading_proc, nvidia as reading_nvidia
 from ui import formatters, contentdiff
 from ui.dashboards import memory, cpu, network, nvidia, processes
@@ -30,10 +30,7 @@ class Application:
         "nvidia_services",
         "nvidia_formatter",
         "process_dashboard",
-        "process_services",
-        "process_formatter",
         "scroll_pos",
-        "sort"
     )
 
     def __init__ (self, stdscr):
@@ -92,18 +89,12 @@ class Application:
 
         #for process window
         self.scroll_pos= 0
-        self.process_services= reading_proc.ProcessMonitor(self.files_path)
-        self.process_formatter= formatters.ProcessFormatter()
-        self.process_dashboard= processes.ProcessDashboard(stdscr, processes_start_y)
-
-        #sorter
-        self.sort= sorter.sorter
+        self.process_dashboard= processes.ProcessDashboard(stdscr, processes_start_y, self.files_path)
 
     def handle_input(self, stdscr):
 
         while True:
             key= stdscr.getch()
-            window_max_lines, _ = stdscr.getmaxyx()
 
             if key == curses.KEY_UP:
                 self.scroll_pos -= 1
@@ -111,7 +102,6 @@ class Application:
                     
             if key == curses.KEY_DOWN:
                 self.scroll_pos += 1
-                self.scroll_pos= min(self.scroll_pos, window_max_lines)
             
             if key == curses.KEY_RESIZE:
                 stdscr= self.stdscr
@@ -140,7 +130,7 @@ class Application:
         #create local references
         stdscr= self.stdscr
         scheduler= self.scheduler
-        sort= self.sort
+
         #mem
         mem_service= self.mem_service
         mem_formatter= self.mem_formatter
@@ -167,8 +157,6 @@ class Application:
         nvidia_dashboard= self.nvidia_dashboard
 
         #processes
-        process_services= self.process_services
-        process_formatter= self.process_formatter
         process_dashboard= self.process_dashboard
 
         #create variable
@@ -204,11 +192,8 @@ class Application:
             cpu_service.get_cpu_temp(disable_cpu_check, schedule)
             cpu_service.get_cpu_load(disable_cpu_check, schedule)
             network_service.update(schedule)
-            process_services.update(schedule)
             nvidia_services.get_nvidia_gpu_readings(schedule)
-
-            #sort raw lists for the process window
-            sort(process_services, schedule)
+            process_dashboard.update_data_pipeline(schedule)
 
             #format system readings
             mem_formatter.format(mem_service, schedule)
@@ -218,7 +203,7 @@ class Application:
             cpu_formatter.format_load(cpu_service, cpu_load_dashboard.max_bar_width, schedule)
             network_formatter.format(network_service, schedule)
             nvidia_formatter.format(nvidia_services, schedule)
-            process_formatter.format(process_services, schedule)
+
 
             #check if content is different. excludes the CPU Load Dashboard and Processes Dashboard
             mem_dashboard.check_content_diff(mem_formatter.memory_info_formatted_output, pressure_formatter.memory_formatted_output)
@@ -227,7 +212,7 @@ class Application:
             nvidia_dashboard.check_content_diff(nvidia_formatter.formatted_nvidia_output)
 
             #handles scrolling through the list
-            process_dashboard.visible_content(self.scroll_pos, process_formatter.formatted_processes_output)
+            self.scroll_pos= process_dashboard.visible_content(self.scroll_pos)
 
             #render differences
             mem_dashboard.render()
