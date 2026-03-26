@@ -629,7 +629,7 @@ class ProcessFormatter:
         for idx, (pid, process) in enumerate(processes.items()):
 
             if idx >= len(out):
-                out.append([TextStyle("N/A", 3) for _ in range(12)])
+                out.append([TextStyle("N/A", 3) for _ in range(13)])
 
             row = out[idx]
             proc_user = usernames[process.uid]
@@ -671,7 +671,10 @@ class ProcessFormatter:
                 row[9].value = f"{process.rss * 1.048576:<1.0f} {'MB':<6}"
             row[9].style = 0
 
-            row[10].value = f"{process.name:<50}"
+            row[10].value = f"{process.name:<19.19}"
             row[10].style = 4
 
-            row[11].value= process.starttime
+            row[11].value= f"{process.command:<150}"
+            row[11].style= 4
+
+            row[12].value= process.starttime

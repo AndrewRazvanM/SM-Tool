@@ -78,7 +78,7 @@ class ScrollWinDiffList:
         self.row_changed= True
         self.row_update_values= False
         self.prev_pid= content[0].value
-        self.starttime= content[11].value
+        self.starttime= content[12].value
         self.row_content= content[:]  # avoid aliasing
 
 class ScrollWinContentDiff:
@@ -111,7 +111,7 @@ class ScrollWinContentDiff:
 
         for row_index, row in enumerate(visible_rows):
             pid = row[0].value
-            starttime = row[11].value
+            starttime = row[12].value
             seen.add(pid)
 
             entry = pid_map.get(pid)

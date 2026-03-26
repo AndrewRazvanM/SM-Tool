@@ -17,7 +17,8 @@ class ProcessInfo:
         "priority",
         "cpu_load",
         "uid",
-        "process_up_time"
+        "process_up_time",
+        "command"
         )
     
     #need to offset stat_list by 3
@@ -35,6 +36,7 @@ class ProcessInfo:
         self.rss = 0
         self.starttime = starttime
         self.priority= 0
+        self.command= " "
 
 class SystemUsername:
 
@@ -154,10 +156,23 @@ class ProcessMonitor:
                 #handles exception for new processes that are killed while I'm reading them. 
                 continue
 
-            #scan for process UID only when it's a new process or the process restarted
+            #scan for process UID and comm only when it's a new process or the process restarted
             uid= None
             if PID not in process_list or process_list[PID].starttime != starttime:
                 status_file= pid_proc_path + "/status"
+                cmdline_file= pid_proc_path + "/cmdline"
+                try:
+                    with open(cmdline_file, "rb") as f:
+                        raw = f.read()
+
+                    if raw:
+                        comm = raw.replace(b"\x00", b" ").decode().strip()
+                    else:
+                        comm = " "
+
+                except FileNotFoundError:
+                    continue
+
                 try:
                     with open(status_file) as f:
                         for line in f:
@@ -181,6 +196,7 @@ class ProcessMonitor:
                 process.num_threads= num_threads
                 process.rss = rss
                 process.process_up_time= process_up_time
+                process.command= comm
                 process_list[PID] = process
 
             else:

@@ -104,7 +104,7 @@ class ProcessDashboard:
             6,   # Cpu %
             10,  # VirtMem
             10,  # Memory
-            25,  # Name 
+            20,  # Name 
             0,   # Command (0 means no truncation / rest of line)
         ]
 
@@ -127,17 +127,17 @@ class ProcessDashboard:
         positions_list= []
         position_idx= 0
         # Build format string dynamically
-        fmt_parts = []
+        header_parts = []
         for w in __widths[:-1]:
             position_idx+= w
             positions_list.append(position_idx)
 
-            fmt_parts.append(f"{{:<{w}}}")
+            header_parts.append(f"{{:<{w}}}")
 
-        fmt_parts.append(f"{{:<{self.window_max_columns}}}")  # last column expands
+        header_parts.append(f"{{:<{self.window_max_columns - position_idx}}}")  # last column expands
 
         self.positions_list= positions_list
-        self.header_format= header_format = "".join(fmt_parts)
+        self.header_format= header_format = "".join(header_parts)
         header_line = header_format.format(*headers)
 
         process_dashboard.addnstr(start_y, 0, header_line, self.window_max_columns, self.bar_map[4])
@@ -169,7 +169,7 @@ class ProcessDashboard:
                 attr= style_map[process_row[0].style]
                 process_dashboard.addnstr(start_y + row_idx, 0, process_row[0].value, window_max_columns, attr)
                 
-                for col in range(0, 10):
+                for col in range(0, 11):
                     col_position= positions_list[col]
 
                     max_col_width= window_max_columns - col_position
