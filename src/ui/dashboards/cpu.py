@@ -214,10 +214,10 @@ class CPULoadDashboard:
         "last_line_y"
     )
 
-    def __init__(self, stdscr: curses.window, formatted_content_list: object, nr_of_threads: int) -> object:
+    def __init__(self, stdscr: curses.window, formatted_content_list: object, nr_of_threads: int, cpu_dashboard_last_y: int) -> object:
         self.cpu_load_dashboard = stdscr
         
-        self.start_y= 14
+        self.start_y= 3 + cpu_dashboard_last_y
         self.start_x= 0
 
         self.nr_of_threads= nr_of_threads
@@ -236,7 +236,7 @@ class CPULoadDashboard:
             
         else:
             self.__dashboard_disabled= False
-            self.last_line_y= max_lines - 4 #remove space for header title
+            self.last_line_y= max_lines - 2 #remove the spaces between the cpu dashboard and cpu load dashboard
 
         self.__cpu_load_content_list= formatted_content_list
 
@@ -246,11 +246,11 @@ class CPULoadDashboard:
         self.style_map= text_map
         self.bar_style_map= bar_map
 
-    def resize(self, stdscr: curses.window):
+    def resize(self, stdscr: curses.window, cpu_dashboard_last_y: int):
         self.cpu_load_dashboard= stdscr
         window_max_lines, window_max_columns= stdscr.getmaxyx()
 
-        start_y= self.start_y
+        start_y= self.start_y = 3 + cpu_dashboard_last_y
 
         max_lines= self.window_max_lines= min(24, window_max_lines  - start_y) #leaves space for the CPU Dashboard and process window
         self.window_max_columns= window_max_columns - 1 - self.start_x
@@ -261,7 +261,7 @@ class CPULoadDashboard:
 
         else:
             self.__dashboard_disabled= False
-            self.last_line_y= max_lines - 4 #remove space for header title
+            self.last_line_y= max_lines - 2 #remove the spaces between the cpu dashboard and cpu load dashboard
             
 
         self.draw_static_interface()

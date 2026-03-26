@@ -26,7 +26,7 @@ class ProcessDashboard:
         "sorter",
     )
 
-    def __init__(self, stdscr: curses.window, cpu_load_max_y: int, file_path: object) -> object:
+    def __init__(self, stdscr: curses.window, last_dashboard_max_y: int, file_path: object) -> object:
         self.process_dashboard = stdscr
         self.process_services= ProcessMonitor(file_path)
         self.process_formatter= ProcessFormatter()
@@ -34,7 +34,7 @@ class ProcessDashboard:
         self.sorter= sorter
         self.process_list= {}
         
-        self.start_y= cpu_load_max_y + 2
+        self.start_y= last_dashboard_max_y + 2
         self.start_x= 0 #other dashboard column width
 
         #max text width
@@ -72,9 +72,9 @@ class ProcessDashboard:
         self.style_map= text_map
         self.bar_map= bar_map
 
-    def resize(self, stdscr: curses.window, cpu_load_max_y: int):
+    def resize(self, stdscr: curses.window, last_dashboard_max_y: int):
         self.process_dashboard= stdscr
-        self.start_y= cpu_load_max_y + 1
+        self.start_y= last_dashboard_max_y + 2
 
         window_max_lines, self.window_max_columns= stdscr.getmaxyx()
         self.window_max_lines= max(0, window_max_lines - 1 - self.start_y)
@@ -180,14 +180,59 @@ class ProcessDashboard:
 
             elif process_obj.row_update_values:
 
-                cpu= process_row[7].value
-                cpu_style= process_row[7].style
-                cpu_col_position= positions_list[6]
-                cpu_max_width= window_max_columns - cpu_col_position
-
-                if cpu_max_width >= 1:
+                cpu= process_row[7].value #updates only cpu
+                style= process_row[7].style
+                col_position= positions_list[6]
+                max_width= window_max_columns - col_position
+                if max_width >= 1:
                 
-                    attr= style_map[cpu_style]
-                    process_dashboard.addnstr(start_y + row_idx, cpu_col_position, cpu, cpu_max_width, attr)
+                    attr= style_map[style]
+                    process_dashboard.addnstr(start_y + row_idx, col_position, cpu, max_width, attr)
+
+                mem= process_row[9].value #updates only mem
+                style= process_row[9].style
+                col_position= positions_list[8]
+                max_width= window_max_columns - col_position
+                if max_width >=1:
+
+                    attr= style_map[style]
+                    process_dashboard.addnstr(start_y + row_idx, col_position, mem, max_width, attr)
+
+                virt_mem= process_row[8].value #updates only virt mem
+                style= process_row[8].style
+                col_position= positions_list[7]
+                max_width= window_max_columns - col_position
+                if max_width >=1:
+
+                    attr= style_map[style]
+                    process_dashboard.addnstr(start_y + row_idx, col_position, virt_mem, max_width, attr)
+
+                state= process_row[4].value #updates only state
+                style= process_row[4].style
+                col_position= positions_list[3]
+                max_width= window_max_columns - col_position
+                if max_width >=1:
+
+                    attr= style_map[style]
+                    process_dashboard.addnstr(start_y + row_idx, col_position, state, max_width, attr)
+
+                priority= process_row[3].value #updates only priority
+                style= process_row[3].style
+                col_position= positions_list[2]
+                max_width= window_max_columns - col_position
+                if max_width >=1:
+
+                    attr= style_map[style]
+                    process_dashboard.addnstr(start_y + row_idx, col_position, priority, max_width, attr)
+
+                time= process_row[5].value #updates only time
+                style= process_row[5].style
+                col_position= positions_list[4]
+                max_width= window_max_columns - col_position
+                if max_width >=1:
+
+                    attr= style_map[style]
+                    process_dashboard.addnstr(start_y + row_idx, col_position, time, max_width, attr)
+
 
                 

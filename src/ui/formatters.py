@@ -107,7 +107,7 @@ class PressureFormatter:
         cpu_formatted_output[1].style = cpu_avg60_state
         cpu_formatted_output[2].value = f"{cpu_avg300:<5}"
         cpu_formatted_output[2].style = cpu_avg300_state
-        cpu_formatted_output[3].value= f"{cpu_pressure_health:<5}"
+        cpu_formatted_output[3].value= f"{cpu_pressure_health:<5.1f}"
         cpu_formatted_output[3].style= cpu_pressure_health_state
         cpu_formatted_output[4].bar_width= cpu_pressure_bar_width
         cpu_formatted_output[4].style= cpu_pressure_bar_state
@@ -210,7 +210,7 @@ class PressureFormatter:
         memory_formatted_output[4].style= full_avg60_state
         memory_formatted_output[5].value= f"{full_avg300:<5}"
         memory_formatted_output[5].style= full_avg300_state
-        memory_formatted_output[6].value= f"{memory_health[0]:<5}"
+        memory_formatted_output[6].value= f"{memory_health[0]:<5.1f}"
         memory_formatted_output[6].style= mem_score_state
         memory_formatted_output[7].bar_width= memory_health[1]
         memory_formatted_output[7].style= mem_bar_state

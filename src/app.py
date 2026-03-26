@@ -74,7 +74,7 @@ class Application:
         self.cpu_dashboard= cpu.CPUDashboard(stdscr, contentdiff.ContentDiff, self.cpu_service.cpu_name, self.cpu_service.sensor_name)
 
         #cpu load dashboard
-        self.cpu_load_dashboard= cpu.CPULoadDashboard(stdscr, self.cpu_formatter, len(self.cpu_service.cpu_load_raw_data))
+        self.cpu_load_dashboard= cpu.CPULoadDashboard(stdscr, self.cpu_formatter, len(self.cpu_service.cpu_load_raw_data), self.cpu_dashboard.last_line_y )
         processes_start_y= self.cpu_dashboard.last_line_y + self.cpu_load_dashboard.last_line_y
 
         #for network dashboard
@@ -109,7 +109,7 @@ class Application:
                 self.mem_dashboard.resize(stdscr)
                 self.cpu_dashboard.resize(stdscr)
     
-                self.cpu_load_dashboard.resize(stdscr)
+                self.cpu_load_dashboard.resize(stdscr, self.cpu_dashboard.last_line_y)
                 processes_start_y= self.cpu_dashboard.last_line_y + self.cpu_load_dashboard.last_line_y
 
                 self.network_dashboard.resize(stdscr)
