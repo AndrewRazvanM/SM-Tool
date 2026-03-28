@@ -127,7 +127,7 @@ class MemoryPressureFormatter:
 
         out[3].value, out[3].style = f"{f10:<{txt_max_len}}", f10_state
         out[4].value, out[4].style = f"{f60:<{txt_max_len}}", f60_state
-        out[{txt_max_len}].value, out[5].style = f"{f300:<{txt_max_len}}", f300_state
+        out[5].value, out[5].style = f"{f300:<{txt_max_len}}", f300_state
 
         out[6].value = f"{health_score:<{txt_max_len}.1f}" if health_score != "N/A" else "N/A"
         out[6].style = score_state
