@@ -106,8 +106,8 @@ class IOPressure:
 
     def __init__(self, file_paths: object):
         self.file_paths= file_paths
-        self.io_some= ["N/A"] * 3
-        self.io_full= ["N/A"] * 3
+        self.io_some= ["N/A"] * 4
+        self.io_full= ["N/A"] * 4
 
 
     def read_io(self, io_check_disable):

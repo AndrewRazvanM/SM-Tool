@@ -53,7 +53,7 @@ class DeviceIO:
 class ReadTotalIO:
 
     def __init__(self, file_path: object):
-        self.file_path= file_path.get_file("disk_info")
+        self.file_path= file_path
         self.sectors_size= 512 #to implement actual check later
         self.devices_total_io= {}
         self.prev_time= monotonic()
@@ -67,7 +67,7 @@ class ReadTotalIO:
         self.prev_time= current_time
         sectors_size= self.sectors_size
 
-        for line in self.file_path:
+        for line in self.file_path.get_file("disk_info"):
             list= line.split(None, 13)
             name= list[2]
             

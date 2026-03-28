@@ -1,4 +1,4 @@
-from core.formatter_threshdolds import SOME_THRESHOLDS, SOME_300_THRESHOLDS, FULL_THRESHOLDS, FULL_300_THRESHOLDS, CPU_AVG10_THRESHOLDS, CPU_AVG300_THRESHOLDS, CPU_AVG60_THRESHOLDS, CPU_HEALTH_THRESHOLDS
+from core.formatter_thresholds import *
 
 def time_formatter(sec:float) -> str:
     """
@@ -9,7 +9,10 @@ def time_formatter(sec:float) -> str:
     m, s = divmod(remainder, 60)
     return f"{h:02}:{m:02}:{s:02} "
 
-def classify_pressure(value, thresholds):
+def classify(value, thresholds:tuple) -> int:
+    """
+    Gives a curse color based on the value.
+    """
     if value == "N/A":
         return 3
     for limit, state in thresholds:
@@ -53,24 +56,24 @@ class CPUPressureFormatter:
             cpu_pressure_bar_width = int(cpu_pressure_health // 4.3)
             cpu_pressure_bar_width = max(1, min(cpu_pressure_bar_width, 23))
 
-            cpu_pressure_state = classify_pressure(cpu_pressure_health, CPU_HEALTH_THRESHOLDS)
+            cpu_pressure_state = classify(cpu_pressure_health, CPU_HEALTH_THRESHOLDS)
 
         # --- Classify averages ---
-        avg10_state = classify_pressure(cpu_avg10, CPU_AVG10_THRESHOLDS)
-        avg60_state = classify_pressure(cpu_avg60, CPU_AVG60_THRESHOLDS)
-        avg300_state = classify_pressure(cpu_avg300, CPU_AVG300_THRESHOLDS)
+        avg10_state = classify(cpu_avg10, CPU_AVG10_THRESHOLDS)
+        avg60_state = classify(cpu_avg60, CPU_AVG60_THRESHOLDS)
+        avg300_state = classify(cpu_avg300, CPU_AVG300_THRESHOLDS)
 
         # --- Write output ---
-        out[0].value = f"{cpu_avg10:<5}"
+        out[0].value = f"{cpu_avg10:<{txt_max_len}}"
         out[0].style = avg10_state
 
-        out[1].value = f"{cpu_avg60:<5}"
+        out[1].value = f"{cpu_avg60:<{txt_max_len}}"
         out[1].style = avg60_state
 
-        out[2].value = f"{cpu_avg300:<5}"
+        out[2].value = f"{cpu_avg300:<{txt_max_len}}"
         out[2].style = avg300_state
 
-        out[3].value = f"{cpu_pressure_health:<5.1f}" if cpu_pressure_health != "N/A" else "N/A"
+        out[3].value = f"{cpu_pressure_health:<{txt_max_len}.1f}" if cpu_pressure_health != "N/A" else "N/A"
         out[3].style = cpu_pressure_state
 
         out[4].bar_width = cpu_pressure_bar_width
@@ -89,6 +92,7 @@ class MemoryPressureFormatter:
         if not schedule["memory"]:
             return
 
+        txt_max_len= 5
         memory_some = system_pressure_readings.memory_some
         memory_full = system_pressure_readings.memory_full
         memory_health = system_pressure_readings.memory_health
@@ -99,13 +103,13 @@ class MemoryPressureFormatter:
         f10, f60, f300 = memory_full
 
         # --- classify states ---
-        s10_state = classify_pressure(s10, SOME_THRESHOLDS)
-        s60_state = classify_pressure(s60, SOME_THRESHOLDS)
-        s300_state = classify_pressure(s300, SOME_300_THRESHOLDS)
+        s10_state = classify(s10, SOME_THRESHOLDS)
+        s60_state = classify(s60, SOME_THRESHOLDS)
+        s300_state = classify(s300, SOME_300_THRESHOLDS)
 
-        f10_state = classify_pressure(f10, FULL_THRESHOLDS)
-        f60_state = classify_pressure(f60, FULL_THRESHOLDS)
-        f300_state = classify_pressure(f300, FULL_300_THRESHOLDS)
+        f10_state = classify(f10, FULL_THRESHOLDS)
+        f60_state = classify(f60, FULL_THRESHOLDS)
+        f300_state = classify(f300, FULL_300_THRESHOLDS)
 
         # --- health classification ---
         health_score = memory_health[0]
@@ -117,15 +121,15 @@ class MemoryPressureFormatter:
             bar_state = score_state
 
         # --- write output ---
-        out[0].value, out[0].style = f"{s10:<5}", s10_state
-        out[1].value, out[1].style = f"{s60:<5}", s60_state
-        out[2].value, out[2].style = f"{s300:<5}", s300_state
+        out[0].value, out[0].style = f"{s10:<{txt_max_len}}", s10_state
+        out[1].value, out[1].style = f"{s60:<{txt_max_len}}", s60_state
+        out[2].value, out[2].style = f"{s300:<{txt_max_len}}", s300_state
 
-        out[3].value, out[3].style = f"{f10:<5}", f10_state
-        out[4].value, out[4].style = f"{f60:<5}", f60_state
-        out[5].value, out[5].style = f"{f300:<5}", f300_state
+        out[3].value, out[3].style = f"{f10:<{txt_max_len}}", f10_state
+        out[4].value, out[4].style = f"{f60:<{txt_max_len}}", f60_state
+        out[{txt_max_len}].value, out[5].style = f"{f300:<{txt_max_len}}", f300_state
 
-        out[6].value = f"{health_score:<5.1f}" if health_score != "N/A" else "N/A"
+        out[6].value = f"{health_score:<{txt_max_len}.1f}" if health_score != "N/A" else "N/A"
         out[6].style = score_state
 
         out[7].bar_width = memory_health[1]
@@ -243,7 +247,7 @@ class CPUTempFormatter:
             cpu_temp_dict_length -= 1
             die_temp_val = cpu_temp_dict["Package id 0"].temp
             die_temp = f"{die_temp_val:>3} °C"
-            die_temp_state = 0 if die_temp_val < 70 else 1 if die_temp_val < 85 else 2
+            die_temp_state = classify(die_temp_val, CPU_TEMP_THRESHOLDS)
             die_temp_bar_state = die_temp_state
             die_temp_bar_width = min(24, die_temp_val // 4)
         else:
@@ -256,7 +260,7 @@ class CPUTempFormatter:
             cpu_temp_dict_length -= 1
             avg_val = cpu_temp_dict["Average"]
             average_temp = f"{avg_val:>3} °C"
-            average_temp_state = 0 if avg_val < 70 else 1 if avg_val < 85 else 2
+            average_temp_state = classify(avg_val, CPU_TEMP_THRESHOLDS)
             average_temp_bar_state = average_temp_state
             average_temp_bar_width = min(23, avg_val // 4)
         else:
@@ -273,7 +277,7 @@ class CPUTempFormatter:
         formatted[2].value, formatted[2].style = average_temp, average_temp_state
         formatted[3].bar_width, formatted[3].style = average_temp_bar_width, average_temp_bar_state
         formatted[4].value, formatted[4].style = num_cpu_core, num_cpu_core_state
-        formatted[5].value, formatted[5].style = num_cpu_threads, 3
+        formatted[5].value, formatted[5].style = num_cpu_threads, num_cpu_core_state
 
         self.formatted_cpu_readings = formatted
 
@@ -330,6 +334,10 @@ class NetworkFormatter:
         total_received_dropp= 0
         total_sent= 0
         total_sent_dropp= 0
+
+        total_up_txt_max_len= 8
+        total_down_txt_max_len= 10
+        per_interface_txt_max_len= 13
         
         formatted_output_index= 3 #reserves the first 4 positions for the totals
 
@@ -346,19 +354,19 @@ class NetworkFormatter:
 
             r_bits= received * 8
             if r_bits < 1000000:
-                received_string= f"Dw: {round((r_bits)/1000, 3):>{13- interface_string_length}} Kb/s"
+                received_string= f"Dw: {round((r_bits)/1000, 3):>{per_interface_txt_max_len - interface_string_length}} Kb/s"
             elif r_bits < 1000000000:
-                received_string= f"Dw: {round((r_bits)/1000000, 3):{13- interface_string_length}} Mb/s"
+                received_string= f"Dw: {round((r_bits)/1000000, 3):{per_interface_txt_max_len - interface_string_length}} Mb/s"
             else:
-                received_string= f"Dw: {round((r_bits)/1000000000, 3):{13- interface_string_length}} Gb/s"
+                received_string= f"Dw: {round((r_bits)/1000000000, 3):{per_interface_txt_max_len - interface_string_length}} Gb/s"
 
             up_bits= sent * 8
             if up_bits < 1000000:
-                sent_string= f"Up: {round((up_bits)/1000, 3):>13.13} Kb/s"
+                sent_string= f"Up: {round((up_bits)/1000, 3):>{per_interface_txt_max_len}.{per_interface_txt_max_len}} Kb/s"
             elif up_bits < 1000000000:
-                sent_string= f"Up: {round((up_bits)/1000000, 3):>13.13} Mb/s"
+                sent_string= f"Up: {round((up_bits)/1000000, 3):>{per_interface_txt_max_len}.{per_interface_txt_max_len}} Mb/s"
             else:
-                sent_string= f"Up: {round((up_bits)/1000000000, 3):>13.13} Gb/s"
+                sent_string= f"Up: {round((up_bits)/1000000000, 3):>{per_interface_txt_max_len}.{per_interface_txt_max_len}} Gb/s"
 
             formatted_network_output[formatted_output_index].value= f"{interface}: {received_string} | {sent_string}"[:49]
             formatted_output_index+= 1
@@ -370,35 +378,35 @@ class NetworkFormatter:
         
         received_bits = total_received * 8
         if received_bits < 1000000:
-            formatted_network_output[0].value= f"{round((total_received)/1000, 3):>10.10} Kb/s"
+            formatted_network_output[0].value= f"{round((total_received)/1000, 3):>{total_down_txt_max_len}.{total_down_txt_max_len}} Kb/s"
         elif received_bits < 1000000000:
-            formatted_network_output[0].value= f"{round((total_received)/1000000, 3):>10.10} Mb/s"
+            formatted_network_output[0].value= f"{round((total_received)/1000000, 3):>{total_down_txt_max_len}.{total_down_txt_max_len}} Mb/s"
         else:
-            formatted_network_output[0].value= f"{round((total_received)/1000000000, 3):>10.10} Gb/s"
+            formatted_network_output[0].value= f"{round((total_received)/1000000000, 3):>{total_down_txt_max_len}.{total_down_txt_max_len}} Gb/s"
 
         r_dropp_bits= total_received_dropp * 8
         if r_dropp_bits < 1000000:
-            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000, 3):>10.10} Kb/s"
+            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000, 3):>{total_down_txt_max_len}.{total_down_txt_max_len}} Kb/s"
         elif r_dropp_bits < 1000000000:
-            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000, 3):>10.10} Mb/s"
+            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000, 3):>{total_down_txt_max_len}.{total_down_txt_max_len}} Mb/s"
         else:
-            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000000, 3):>10.10} Gb/s"
+            formatted_network_output[1].value= f"{round((r_dropp_bits)/1000000000, 3):>{total_down_txt_max_len}.{total_down_txt_max_len}} Gb/s"
 
         up_bits= total_sent * 8
         if up_bits < 1000000:
-            formatted_network_output[2].value= f"{round((up_bits)/1000, 3):>8.8} Kb/s"
+            formatted_network_output[2].value= f"{round((up_bits)/1000, 3):>{total_up_txt_max_len}.{total_up_txt_max_len}} Kb/s"
         elif up_bits < 1000000000:
-            formatted_network_output[2].value= f"{round((up_bits)/1000000, 3):>8.8} Mb/s"
+            formatted_network_output[2].value= f"{round((up_bits)/1000000, 3):>{total_up_txt_max_len}.{total_up_txt_max_len}} Mb/s"
         else:
-            formatted_network_output[2].value= f"{round((up_bits)/1000000000, 3):>8.8} Gb/s"
+            formatted_network_output[2].value= f"{round((up_bits)/1000000000, 3):>{total_up_txt_max_len}.{total_up_txt_max_len}} Gb/s"
 
         up_dropp_bits= total_sent_dropp * 8
         if up_dropp_bits < 1000000:
-            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000, 3):>8.8} Kb/s"
+            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000, 3):>{total_up_txt_max_len}.{total_up_txt_max_len}} Kb/s"
         elif up_dropp_bits < 1000000000:
-            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000, 3):>8.8} Mb/s"
+            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000, 3):>{total_up_txt_max_len}.{total_up_txt_max_len}} Mb/s"
         else:
-            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000000, 3):>8.8} Gb/s"
+            formatted_network_output[3].value= f"{round((up_dropp_bits)/1000000000, 3):>{total_up_txt_max_len}.{total_up_txt_max_len}} Gb/s"
 
 class NvidiaFormatter:
 
@@ -415,25 +423,19 @@ class NvidiaFormatter:
         
         gpu_readings= nvidia_readings
         formatted_nvidia_output= self.formatted_nvidia_output
+
+        text_max_size= 20
         
         for gpu_index in gpu_readings:
-
-            if gpu_readings[gpu_index]["Temperature"] == "N/A":
-                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]:<30.30}"
-                formatted_temp_attr= 3
+            gpu_temp= gpu_readings[gpu_index]["Temperature"]
+            if gpu_temp == "N/A":
+                formatted_temp= f"{gpu_temp:<{text_max_size}.{text_max_size}}"
                 gpu_temp_bar_width= 3
-            elif gpu_readings[gpu_index]["Temperature"] < 70:
-                formatted_temp= f"{gpu_readings[gpu_index]['Temperature']} °C".ljust(30)[:30]
-                formatted_temp_attr= 0
-                gpu_temp_bar_width= min(49, int((gpu_readings[gpu_index]["Temperature"] /100) * 49))
-            elif gpu_readings[gpu_index]["Temperature"] < 80:
-                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]} {"°C":<30.30}"
-                formatted_temp_attr= 1
-                gpu_temp_bar_width= min(49, int((gpu_readings[gpu_index]["Temperature"] /100) * 49))
             else:
-                formatted_temp= f"{gpu_readings[gpu_index]["Temperature"]} {"°C":<30.30}"
-                formatted_temp_attr= 2
-                gpu_temp_bar_width= min(49, int((gpu_readings[gpu_index]["Temperature"] /100) * 49))
+                formatted_temp= f"{gpu_temp} {"°C":<{text_max_size}.{text_max_size}}"
+                gpu_temp_bar_width= min(49, int((gpu_temp /100) * 49))
+            
+            formatted_temp_attr= classify(gpu_temp, GPU_TEMP_THRESHOLDS)
 
             formatted_nvidia_output[0].value= formatted_temp
             formatted_nvidia_output[0].style= formatted_temp_attr
@@ -441,57 +443,42 @@ class NvidiaFormatter:
             formatted_nvidia_output[1].style=formatted_temp_attr
 
             if gpu_readings[gpu_index]["GPU Clock Speed"] == "N/A":
-                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]:<30.30}"
+                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]:<{text_max_size}}"
                 formatted_clock_speed_attr= 3
             else:
-                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]} {"Mhz":<30.30}"
+                formatted_clock_speed= f"{gpu_readings[gpu_index]["GPU Clock Speed"]} {"Mhz":<{text_max_size}.{text_max_size}}"
                 formatted_clock_speed_attr= 0
 
             formatted_nvidia_output[2].value= formatted_clock_speed
             formatted_nvidia_output[2].style= formatted_clock_speed_attr
 
             if gpu_readings[gpu_index]["Fan Speed"] == "N/A":
-                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]:<30.30}"
+                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]:<{text_max_size}}"
                 formatted_fan_speed_attr= 3
             else:
-                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]} {"RPM":<30.30}"
+                formatted_fan_speed= f"{gpu_readings[gpu_index]["Fan Speed"]} {"RPM":<{text_max_size}.{text_max_size}}"
                 formatted_fan_speed_attr= 0
 
             formatted_nvidia_output[3].value= formatted_fan_speed
             formatted_nvidia_output[3].style= formatted_fan_speed_attr
-
-            if gpu_readings[gpu_index]["Memory Load"] == "N/A":
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]:<30.30}"
-                formatted_memory_load_attr= 3
-            elif gpu_readings[gpu_index]["Memory Load"] < 60:
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30.30}"
-                formatted_memory_load_attr= 0
-            elif gpu_readings[gpu_index]["Memory Load"] < 90:
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30.30}"
-                formatted_memory_load_attr= 1
-            else:
-                formatted_memory_load= f"{gpu_readings[gpu_index]["Memory Load"]} {"%":<30.30}"
-                formatted_memory_load_attr= 2
+    
+            mem_load= gpu_readings[gpu_index]["Memory Load"]
+            formatted_memory_load= f"{mem_load} {"%":<{text_max_size}.{text_max_size}}"
+            formatted_memory_load_attr= classify(mem_load, GPU_LOAD_THRESHOLDS)
+            
 
             formatted_nvidia_output[4].value= formatted_memory_load
             formatted_nvidia_output[4].style= formatted_memory_load_attr
 
+            gpu_load= gpu_readings[gpu_index]["GPU Load"]
+
             if gpu_readings[gpu_index]["GPU Load"] == "N/A":
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]:<30.30}"
-                formatted_gpu_load_attr= 3
-                gpu_load_bar_width= 1
-            elif gpu_readings[gpu_index]["GPU Load"] < 60:
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30.30}"
-                formatted_gpu_load_attr= 0
-                gpu_load_bar_width= min(49, int((gpu_readings[gpu_index]["GPU Load"] / 100) * 49))
-            elif gpu_readings[gpu_index]["GPU Load"] < 90:
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30.30}"
-                formatted_gpu_load_attr= 1
-                gpu_load_bar_width= min(49, int((gpu_readings[gpu_index]["GPU Load"] / 100) * 49))
+                formatted_gpu_load= f"{gpu_load:<{text_max_size}.{text_max_size}}"
             else:
-                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<30.30}"
-                formatted_gpu_load_attr= 2
-                gpu_load_bar_width= min(49, int((gpu_readings[gpu_index]["GPU Load"] / 100) * 49))
+                formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<{text_max_size}.{text_max_size}}"
+                gpu_load_bar_width= min(49, int((gpu_load / 100) * 49))
+
+            formatted_gpu_load_attr= classify(gpu_load, GPU_LOAD_THRESHOLDS)
 
             formatted_nvidia_output[5].value= formatted_gpu_load
             formatted_nvidia_output[5].style= formatted_gpu_load_attr
@@ -549,12 +536,14 @@ class ProcessFormatter:
             row[7].value = f"{cpu:<6.6}"
             row[7].style = 0 if cpu < 50 else 1 if cpu < 80 else 2
 
+            #converst from MiB to GB or MB
             if process.vsize > 1024:
                 row[8].value = f"{(process.vsize // 1024) * 1.048576:<1.0f} {'GB':<6}"
             else:
                 row[8].value = f"{process.vsize * 1.048576:<1.0f} {'MB':<6}"
             row[8].style = 0
 
+            #converst from MiB to GB or MB
             if process.rss > 1024:
                 row[9].value = f"{(process.rss // 1024) * 1.048576:<1.0f} {'GB':<6}"
             else:
@@ -567,4 +556,4 @@ class ProcessFormatter:
             row[11].value= f"{process.command:<150}"
             row[11].style= 4
 
-            row[12].value= process.starttime
+            row[12].value= process.starttime #used by ContentDiff to check if process changed

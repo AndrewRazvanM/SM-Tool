@@ -95,7 +95,7 @@ class Application:
             if key == ord("q"):
                 self.running= False
                 self.files_path.close_all()
-                self.cpu_dashboard.cpu_service.close_temp_files()
+                self.cpu_dashboard.cpu_temp_readings.close_temp_files()
                 self.nvidia_dashboard.nvidia_service.close_nvidia_drivers()
 
             if key == -1:
