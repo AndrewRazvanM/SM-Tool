@@ -1,4 +1,7 @@
 import curses
+from readings.network import NetworkTraffic
+from ui.formatters import NetworkFormatter
+from ui.contentdiff import ContentDiff
 
 class NetworkDashboard:
         __slots__= (
@@ -7,12 +10,16 @@ class NetworkDashboard:
         "start_x",
         "style_map",
         "bar_style_map",
-        "__network_object_diff",
+        "network_services",
+        "formatter",
+        "__diff_engine",
         "__dashboard_disabled",
         )
 
-        def __init__(self, stdscr: curses.window, content_diff_engine: object) -> object:
+        def __init__(self, stdscr: curses.window, file_path: object) -> object:
             self.network_dashboard= stdscr
+            self.network_services= NetworkTraffic(file_path)
+            self.formatter= NetworkFormatter()
 
             self.start_y= 3
             self.start_x= 50 + 48 + 1 #the other dashboard positions
@@ -24,7 +31,7 @@ class NetworkDashboard:
             else:
                 self.__dashboard_disabled= True
 
-            self.__network_object_diff= content_diff_engine()
+            self.__diff_engine= ContentDiff()
 
         def resize(self, stdscr: curses.window):
             self.network_dashboard= stdscr
@@ -33,19 +40,25 @@ class NetworkDashboard:
             if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
                 self.__dashboard_disabled= False
                 self.draw_static_interface()
-                self.__network_object_diff.force_write= True
+                self.__diff_engine.force_write= True
 
             else:
                 self.__dashboard_disabled= True
 
-        def assing_style(self):
-            from .style_maps import text_map, bar_map
+        def assign_style(self):
+            from core.style_maps import text_map, bar_map
 
             self.style_map= text_map
             self.bar_style_map= bar_map
 
-        def check_content_diff(self, formatted_network_readings: list) -> list:
-            self.__network_object_diff.check_differences(formatted_network_readings)
+        def update_data_pipeline(self, schedule: dict) -> list:
+            network_services= self.network_services
+            formatter= self.formatter
+
+            network_services.update(schedule)
+            formatter.format(network_services.throughput, schedule)
+
+            self.__diff_engine.check_differences(formatter.formatted_network_output)
 
         def draw_static_interface(self):
             if self.__dashboard_disabled:
@@ -96,7 +109,7 @@ class NetworkDashboard:
         
             network_dashboard= self.network_dashboard
 
-            content_list= self.__network_object_diff.is_content_diff
+            content_list= self.__diff_engine.is_content_diff
 
             start_y= self.start_y 
             start_x= self.start_x

@@ -1,5 +1,5 @@
 from core import scheduler, file_handling
-from readings import memory as reading_mem, system_pressure, cpu as reading_cpu, network as reading_net, processes as reading_proc, nvidia as reading_nvidia
+from readings import memory as reading_mem, system_pressure, cpu as reading_cpu, processes as reading_proc
 from ui import formatters, contentdiff
 from ui.dashboards import memory, cpu, network, nvidia, processes
 import curses
@@ -13,22 +13,11 @@ class Application:
         "files_path",
         "scheduler",
         "input_handler",
-        "diff_engine",
-        "mem_formatter",
         "mem_dashboard",
-        "mem_service",
-        "pressure_service",
-        "pressure_formatter",
-        "cpu_formatter",
         "cpu_dashboard",
-        "cpu_service",
         "cpu_load_dashboard",
         "network_dashboard",
-        "network_formatter",
-        "network_service",
         "nvidia_dashboard",
-        "nvidia_services",
-        "nvidia_formatter",
         "process_dashboard",
         "scroll_pos",
     )
@@ -58,34 +47,20 @@ class Application:
         self.scheduler = scheduler.Scheduler()
 
         #For memory dashboard
-        self.mem_service = reading_mem.MemoryInfo(self.files_path)
-        self.mem_formatter = formatters.MemoryFormatter()
-        self.mem_dashboard = memory.MemoryDashboard(stdscr, contentdiff.ContentDiff)
-
-        #For system pressure
-        self.pressure_service= system_pressure.SystemPressure(self.files_path)
-        self.pressure_formatter= formatters.PressureFormatter()
-
-        #for both cpu & cpu load dashboards
-        self.cpu_formatter= formatters.CPUFormatter() 
-        self.cpu_service= reading_cpu.CPUInfo(self.files_path)
+        self.mem_dashboard = memory.MemoryDashboard(stdscr, self.files_path)
 
         #cpu dashboard
-        self.cpu_dashboard= cpu.CPUDashboard(stdscr, contentdiff.ContentDiff, self.cpu_service.cpu_name, self.cpu_service.sensor_name)
+        self.cpu_dashboard= cpu.CPUDashboard(stdscr, self.files_path)
 
         #cpu load dashboard
-        self.cpu_load_dashboard= cpu.CPULoadDashboard(stdscr, self.cpu_formatter, len(self.cpu_service.cpu_load_raw_data), self.cpu_dashboard.last_line_y )
+        self.cpu_load_dashboard= cpu.CPULoadDashboard(stdscr, self.cpu_dashboard.last_line_y, self.files_path)
         processes_start_y= self.cpu_dashboard.last_line_y + self.cpu_load_dashboard.last_line_y
 
         #for network dashboard
-        self.network_service= reading_net.NetworkTraffic(self.files_path)
-        self.network_formatter= formatters.NetworkFormatter()
-        self.network_dashboard= network.NetworkDashboard(stdscr, contentdiff.ContentDiff)
+        self.network_dashboard= network.NetworkDashboard(stdscr, self.files_path)
 
         #for nvidia dashboard
-        self.nvidia_services= reading_nvidia.Nvidia()
-        self.nvidia_formatter= formatters.NvidiaFormatter()
-        self.nvidia_dashboard= nvidia.NvidiaDashboard(stdscr, contentdiff.ContentDiff, self.nvidia_services.gpu_name_list)
+        self.nvidia_dashboard= nvidia.NvidiaDashboard(stdscr)
 
         #for process window
         self.scroll_pos= 0
@@ -120,8 +95,8 @@ class Application:
             if key == ord("q"):
                 self.running= False
                 self.files_path.close_all()
-                self.cpu_service.close_temp_files()
-                self.nvidia_services.close_nvidia_drivers()
+                self.cpu_dashboard.cpu_service.close_temp_files()
+                self.nvidia_dashboard.nvidia_service.close_nvidia_drivers()
 
             if key == -1:
                 break  # no key
@@ -132,28 +107,16 @@ class Application:
         scheduler= self.scheduler
 
         #mem
-        mem_service= self.mem_service
-        mem_formatter= self.mem_formatter
         mem_dashboard= self.mem_dashboard
-
-        #pressure
-        pressure_service= self.pressure_service
-        pressure_formatter= self.pressure_formatter
 
         #cpu
         cpu_dashboard= self.cpu_dashboard
         cpu_load_dashboard= self.cpu_load_dashboard
-        cpu_service= self.cpu_service
-        cpu_formatter= self.cpu_formatter
 
         #network
         network_dashboard= self.network_dashboard
-        network_service= self.network_service
-        network_formatter= self.network_formatter
 
         #nvidia
-        nvidia_services= self.nvidia_services
-        nvidia_formatter= self.nvidia_formatter
         nvidia_dashboard= self.nvidia_dashboard
 
         #processes
@@ -164,12 +127,12 @@ class Application:
         disable_cpu_check= False
 
         #assing the styles
-        mem_dashboard.assing_styles()
-        cpu_dashboard.assing_style()
-        cpu_load_dashboard.assing_style()
-        network_dashboard.assing_style()
-        nvidia_dashboard.assing_style()
-        process_dashboard.assing_style()
+        mem_dashboard.assign_style()
+        cpu_dashboard.assign_style()
+        cpu_load_dashboard.assign_style()
+        network_dashboard.assign_style()
+        nvidia_dashboard.assign_style()
+        process_dashboard.assign_style()
 
         #generate static interfaces
         mem_dashboard.draw_static_interface()
@@ -185,33 +148,15 @@ class Application:
 
             schedule = scheduler.should_run()
 
-            #get system readings
-            mem_service.update(schedule)
-            memory_check_disable= pressure_service.read_mem(memory_check_disable, schedule)
-            pressure_service.read_cpu(disable_cpu_check, schedule)
-            cpu_service.get_cpu_temp(disable_cpu_check, schedule)
-            cpu_service.get_cpu_load(disable_cpu_check, schedule)
-            network_service.update(schedule)
-            nvidia_services.get_nvidia_gpu_readings(schedule)
+            #get system readings and format them
+            cpu_dashboard.update_data_pipeline(schedule)
+            cpu_load_dashboard.update_data_pipeline(schedule)
+            mem_dashboard.update_data_pipeline(schedule)
+            network_dashboard.update_data_pipeline(schedule)
+            nvidia_dashboard.update_data_pipeline(schedule)
             process_dashboard.update_data_pipeline(schedule)
 
-            #format system readings
-            mem_formatter.format(mem_service, schedule)
-            pressure_formatter.format_mem(pressure_service, schedule)
-            pressure_formatter.format_cpu(pressure_service, schedule)
-            cpu_formatter.format_info(cpu_service, schedule)
-            cpu_formatter.format_load(cpu_service, cpu_load_dashboard.max_bar_width, schedule)
-            network_formatter.format(network_service, schedule)
-            nvidia_formatter.format(nvidia_services, schedule)
-
-
-            #check if content is different. excludes the CPU Load Dashboard and Processes Dashboard
-            mem_dashboard.check_content_diff(mem_formatter.memory_info_formatted_output, pressure_formatter.memory_formatted_output)
-            cpu_dashboard.check_content_diff(cpu_formatter.formatted_cpu_readings, pressure_formatter.cpu_formatted_output)
-            network_dashboard.check_content_diff(network_formatter.formatted_network_output)
-            nvidia_dashboard.check_content_diff(nvidia_formatter.formatted_nvidia_output)
-
-            #handles scrolling through the list
+            #handles scrolling through the process list
             self.scroll_pos= process_dashboard.visible_content(self.scroll_pos)
 
             #render differences

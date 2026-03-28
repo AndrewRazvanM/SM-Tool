@@ -1,4 +1,8 @@
 import curses
+from readings.memory import MemoryInfo
+from readings.system_pressure import MemPressure
+from ui.formatters import MemoryFormatter, MemoryPressureFormatter
+from ui.contentdiff import ContentDiff
 
 class MemoryDashboard:
     "Memory Dashboard monitor. It's 9 lines and 51 columns."
@@ -8,19 +12,29 @@ class MemoryDashboard:
         "start_x",
         "style_map",
         "bar_style_map",
-        "__mem_info_content_diff",
-        "__mem_pressure_content_diff",
-        "__dashboard_disabled"
+        "__dashboard_disabled",
+        "__diff_engine_p",
+        "__diff_engine_m",
+        "mem_service",
+        "mem_formatter",
+        "mem_p_formatter",
+        "mem_pressure_service",
+        "mem_check_disable"
     )
 
-    def __init__(self, stdscr: curses.window, content_diff_engine: object) -> object:
+    def __init__(self, stdscr: curses.window, file_path: object) -> object:
+        self.mem_check_disable= False
         self.memory_dashboard = stdscr
+        self.mem_service = MemoryInfo(file_path, self.mem_check_disable)
+        self.mem_pressure_service= MemPressure(file_path)
+        self.mem_formatter = MemoryFormatter()
+        self.mem_p_formatter= MemoryPressureFormatter()
+        self.__diff_engine_p= ContentDiff() #for memory info
+        self.__diff_engine_m= ContentDiff() #for memory pressure
 
         #starting position
         self.start_y= 3
         self.start_x= 51
-        self.__mem_info_content_diff= content_diff_engine()
-        self.__mem_pressure_content_diff= content_diff_engine()
 
         window_max_lines, window_max_columns= stdscr.getmaxyx()
         if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
@@ -28,8 +42,8 @@ class MemoryDashboard:
         else:
             self.__dashboard_disabled= True
 
-    def assing_styles(self):
-        from .style_maps import text_map, bar_map
+    def assign_style(self):
+        from core.style_maps import text_map, bar_map
 
         self.style_map= text_map
         self.bar_style_map= bar_map
@@ -41,8 +55,8 @@ class MemoryDashboard:
         if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
             self.__dashboard_disabled= False
             self.draw_static_interface()
-            self.__mem_info_content_diff.force_write= True
-            self.__mem_pressure_content_diff.force_write= True
+            self.__diff_engine_p.force_write= True
+            self.__diff_engine_m.force_write= True
 
         else:
             self.__dashboard_disabled= True
@@ -93,9 +107,21 @@ class MemoryDashboard:
         memory_dashboard.addstr(start_y+ 6, start_x+ 28, "   Free SWAP:")
         memory_dashboard.noutrefresh()
 
-    def check_content_diff(self, mem_info_content_list: list, mem_pressure_content_list: list):
-        self.__mem_info_content_diff.check_differences(mem_info_content_list)
-        self.__mem_pressure_content_diff.check_differences(mem_pressure_content_list)
+    def update_data_pipeline(self, schedule: dict):
+        mem_service= self.mem_service
+        mem_pressure_service= self.mem_pressure_service
+
+        mem_formatter= self.mem_formatter #mem info
+        mem_p_formatter= self.mem_p_formatter #mem pressure
+
+        mem_service.update(schedule)
+        mem_pressure_service.read_mem(self.mem_check_disable, schedule)
+        mem_formatter.format(mem_service, schedule)
+        mem_p_formatter.format_mem(mem_pressure_service, schedule)
+
+        self.__diff_engine_m.check_differences(mem_formatter.formatted_output)
+        self.__diff_engine_p.check_differences(mem_p_formatter.formatted_output)
+
 
     def render(self):
         if self.__dashboard_disabled:
@@ -107,9 +133,10 @@ class MemoryDashboard:
         style_map= self.style_map
         bar_style_map= self.bar_style_map
 
-        mem_info= self.__mem_info_content_diff.is_content_diff
-        mem_pressure= self.__mem_pressure_content_diff.is_content_diff
+        mem_info= self.__diff_engine_m.is_content_diff
+        mem_pressure= self.__diff_engine_p.is_content_diff
 
+        #mem info
         if mem_info[0].changed:
             style= mem_info[0].content.style
             attr= style_map[style]
@@ -129,7 +156,8 @@ class MemoryDashboard:
             style= mem_info[3].content.style
             attr= style_map[style]
             memory_dashboard.addstr(6 + start_y, 42 + start_x, mem_info[3].content.value, attr)
-            
+        
+        #pressure readings
         if mem_pressure[0].changed:
             style= mem_pressure[0].content.style
             attr= style_map[style]

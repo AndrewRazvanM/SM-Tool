@@ -1,5 +1,6 @@
 from time import monotonic
 from os import path as os_path
+from core.file_handling import NeededFiles
 
 class Interface:
     __slots__= (

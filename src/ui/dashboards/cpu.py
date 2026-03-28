@@ -1,204 +1,199 @@
 import curses
+from readings.memory import MemoryInfo
+from readings.system_pressure import CPUPressure
+from readings.cpu import CPUInfoLoad, CPUInfoTemp
+from ui.formatters import CPUTempFormatter, CPULoadFormatter, CPUPressureFormatter
+from ui.contentdiff import ContentDiff
 
 class CPUDashboard:
-
-    __slots__= (
+    __slots__ = (
         "cpu_dashboard",
         "start_y",
         "start_x",
         "style_map",
         "bar_style_map",
-        "__cpu_info_content_diff",
-        "__cpu_pressure_content_diff",
+        "cpu_temp_readings",
+        "cpu_pressure",
+        "temp_formatter",
+        "pressure_formatter",
+        "__diff_engine_temp",
+        "__diff_engine_pressure",
         "__dashboard_disabled",
         "__cpu_name",
         "__sensor_name",
-        "last_line_y"
+        "last_line_y",
     )
 
-    def __init__(self, stdscr: curses.window, content_diff_engine: object, cpu_name: str, sensor_name: str) -> object:
+    def __init__(self, stdscr: curses.window, file_path: object):
         self.cpu_dashboard = stdscr
-        
-        self.start_y= 3
-        self.start_x= 0
+        self.cpu_temp_readings = CPUInfoTemp(file_path)
+        self.cpu_pressure = CPUPressure(file_path)
+        self.temp_formatter = CPUTempFormatter()
+        self.pressure_formatter= CPUPressureFormatter()
+        self.__diff_engine_temp = ContentDiff()
+        self.__diff_engine_pressure = ContentDiff()
 
-        #max text width
-        window_max_lines, window_max_columns= stdscr.getmaxyx()
+        self.start_y = 3
+        self.start_x = 0
 
-        #if window is too small, disables the dashboard
-        if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
-            self.__dashboard_disabled= False
-            self.last_line_y= 13
+        # Check initial window size
+        lines, cols = stdscr.getmaxyx()
+        if lines >= 13 + self.start_y and cols >= 51 + self.start_x:
+            self.__dashboard_disabled = False
+            self.last_line_y = 13
         else:
-            self.__dashboard_disabled= True
-            self.last_line_y= 3
+            self.__dashboard_disabled = True
+            self.last_line_y = 3
 
-        self.__cpu_info_content_diff= content_diff_engine()
-        self.__cpu_pressure_content_diff= content_diff_engine()
-
-        self.__cpu_name= cpu_name
-        self.__sensor_name= sensor_name
+        self.__cpu_name = self.cpu_temp_readings.cpu_name
+        self.__sensor_name = self.cpu_temp_readings.sensor_name
 
     def resize(self, stdscr: curses.window):
-        self.cpu_dashboard= stdscr
-        window_max_lines, window_max_columns= stdscr.getmaxyx()
-
-        if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
-            self.__dashboard_disabled= False
+        self.cpu_dashboard = stdscr
+        lines, cols = stdscr.getmaxyx()
+        if lines >= 13 + self.start_y and cols >= 51 + self.start_x:
+            self.__dashboard_disabled = False
             self.draw_static_interface()
-            
-            self.last_line_y= 13
-
-            self.__cpu_info_content_diff.force_write= True
-            self.__cpu_pressure_content_diff.force_write= True
-
+            self.__diff_engine_temp.force_write = True
+            self.__diff_engine_pressure.force_write = True
+            self.last_line_y = 13
         else:
-            self.__dashboard_disabled= True
-            self.last_line_y= 0
-    
-    def assing_style(self):
-        from .style_maps import text_map, bar_map
+            self.__dashboard_disabled = True
+            self.last_line_y = 0
 
-        self.style_map= text_map
-        self.bar_style_map= bar_map
+    def assign_style(self):
+        from core.style_maps import text_map, bar_map
+        self.style_map = text_map
+        self.bar_style_map = bar_map
+
+    def update_data_pipeline(self, schedule: dict):
+        disable_cpu_check=False
+        cpu_temp_readings= self.cpu_temp_readings
+        cpu_pressure= self.cpu_pressure
+        temp_formatter= self.temp_formatter
+        pressure_formatter= self.pressure_formatter
+
+        # Update CPU temperature readings
+        cpu_temp_readings.get_cpu_temp(disable_cpu_check, schedule)
+        temp_formatter.format_info(cpu_temp_readings, schedule)
+        self.__diff_engine_temp.check_differences(temp_formatter.formatted_cpu_readings)
+
+        # Update CPU pressure readings
+        cpu_pressure.read_cpu(disable_cpu_check, schedule)
+        pressure_formatter.format(cpu_pressure, schedule)
+        self.__diff_engine_pressure.check_differences(pressure_formatter.formatted_output)
 
     def draw_static_interface(self):
-
         if self.__dashboard_disabled:
             return
-        
-        cpu_name= self.__cpu_name
-        sensor_name= self.__sensor_name
-        cpu_dashboard= self.cpu_dashboard
 
-        #starting position
-        start_y= self.start_y 
-        start_x= self.start_x
+        dash = self.cpu_dashboard
+        start_y, start_x = self.start_y, self.start_x
+        cpu_name, sensor_name = self.__cpu_name, self.__sensor_name
 
-        #build the borders
-        # Draw corners first
-        cpu_dashboard.addch(start_y, start_x, curses.ACS_ULCORNER)
-        cpu_dashboard.addch(start_y, start_x+ 50, curses.ACS_URCORNER)
-        cpu_dashboard.addch(start_y+ 11, start_x, curses.ACS_LLCORNER)
-        cpu_dashboard.addch(start_y+ 11, start_x+ 50, curses.ACS_LRCORNER)
+        # Draw borders
+        dash.addch(start_y, start_x, curses.ACS_ULCORNER)
+        dash.addch(start_y, start_x + 50, curses.ACS_URCORNER)
+        dash.addch(start_y + 11, start_x, curses.ACS_LLCORNER)
+        dash.addch(start_y + 11, start_x + 50, curses.ACS_LRCORNER)
+        dash.hline(start_y, start_x + 1, curses.ACS_HLINE, 49)
+        dash.hline(start_y + 11, start_x + 1, curses.ACS_HLINE, 49)
+        dash.vline(start_y + 1, start_x, curses.ACS_VLINE, 10)
+        dash.vline(start_y + 1, start_x + 50, curses.ACS_VLINE, 10)
 
-        # Draw horizontal edges (width-1)
-        cpu_dashboard.hline(start_y, start_x+1, curses.ACS_HLINE, 49)
-        cpu_dashboard.hline(start_y+ 11, start_x+1, curses.ACS_HLINE, 49)
+        # Titles and labels
+        dash.addstr(start_y, start_x + 15, "CPU Dashboard", curses.A_BOLD)
+        dash.addstr(1 + start_y, max(1, 48 - len(cpu_name)) + start_x, cpu_name[:48])
+        dash.addstr(2 + start_y, 7 + start_x, "CPU Cores:")
+        dash.addstr(2 + start_y, 31 + start_x, "CPU Threads:")
+        dash.hline(3 + start_y, 1 + start_x, "=", 49)
 
-        # Draw vertical edges (height-1)
-        cpu_dashboard.vline(start_y+1, start_x, curses.ACS_VLINE, 10)
-        cpu_dashboard.vline(start_y+1, start_x+ 50, curses.ACS_VLINE, 10)
-        #add title
-        cpu_dashboard.addstr(start_y+ 0, start_x+ 15, "CPU Dashboard", curses.A_BOLD)
+        # CPU temperature labels
+        dash.addstr(8 + start_y, 13 + start_x, f"Temp sensor is {sensor_name}"[:36])
+        dash.addstr(9 + start_y, 7 + start_x, "CPU Die:")
+        dash.addstr(9 + start_y, 34 + start_x, "CPU Avg:")
 
-        #add CPU name
-        cpu_dashboard.addstr(1 + start_y, max(1,48 - len(cpu_name)) + start_x, cpu_name[:48])
+        # CPU pressure labels
+        dash.addstr(4 + start_y, 11 + start_x, "PSI:")
+        dash.addstr(4 + start_y, 34 + start_x, "PSI Health:")
+        dash.vline(4 + start_y, 26 + start_x, "|", 7)
+        dash.addstr(5 + start_y, 1 + start_x, "Avg10:")
+        dash.addstr(5 + start_y, 8 + start_x, "| Avg60:")
+        dash.addstr(5 + start_y, 17 + start_x, "| Avg300:")
+        dash.hline(7 + start_y, 1 + start_x, "-", 49)
 
-        cpu_dashboard.addstr(2 + start_y, 7 + start_x, "CPU Cores:")
-        cpu_dashboard.addstr(2 + start_y, 31 + start_x, "CPU Threads:")
-        cpu_dashboard.hline(3+ start_y, 1 + start_x, "=" , 49)
-
-        cpu_dashboard.addstr(4 + start_y, 11 + start_x, "PSI:")
-        cpu_dashboard.addstr(4 + start_y, 34 + start_x, "PSI Health:")
-        cpu_dashboard.vline(4 + start_y, 26 + start_x, "|", 7)
-
-        cpu_dashboard.addstr(5 + start_y, 1 + start_x, "Avg10:")
-        cpu_dashboard.addstr(5 + start_y, 8 + start_x, "| Avg60:")
-        cpu_dashboard.addstr(5 + start_y, 17 + start_x, "| Avg300:")
-        cpu_dashboard.hline(7 + start_y, 1 + start_x, "-", 49)
-
-        cpu_dashboard.addstr(8 + start_y, 13 + start_x, f"Temp sensor is {sensor_name}"[:36])
-        cpu_dashboard.addstr(9 + start_y, 7 + start_x, "CPU Die:")
-        cpu_dashboard.addstr(9 + start_y, 34 + start_x, "CPU Avg:")
-        
-        cpu_dashboard.noutrefresh()
-
-    def check_content_diff(self, formatted_cpu_readings: list, formatted_cpu_pressure: list):
-        self.__cpu_info_content_diff.check_differences(formatted_cpu_readings)
-        self.__cpu_pressure_content_diff.check_differences(formatted_cpu_pressure)
+        dash.noutrefresh()
 
     def render(self):
         if self.__dashboard_disabled:
             return
-        
-        cpu_dashboard= self.cpu_dashboard
 
-        cpu_info= self.__cpu_info_content_diff.is_content_diff
-        cpu_pressure= self.__cpu_pressure_content_diff.is_content_diff
+        dash = self.cpu_dashboard
+        start_y, start_x = self.start_y, self.start_x
+        style_map, bar_style_map = self.style_map, self.bar_style_map
 
-        start_y= self.start_y 
-        start_x= self.start_x
+        # CPU Temperature
+        temp_list = self.__diff_engine_temp.is_content_diff
+        if temp_list[0].changed:
+            dash.addstr(9 + start_y, 16 + start_x,
+                        temp_list[0].content.value,
+                        style_map[temp_list[0].content.style])
 
-        style_map= self.style_map
-        bar_style_map= self.bar_style_map
+        if temp_list[1].changed:
+            width = min(24, temp_list[1].content.bar_width)
+            dash.hline(10 + start_y, 1 + start_x, " ", width,
+                       bar_style_map[temp_list[1].content.style])
+            dash.hline(10 + start_y, 1 + start_x + width, " ", 24 - width)
 
-        if cpu_info[0].changed:
-            style= cpu_info[0].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(9 + start_y, 16 + start_x, cpu_info[0].content.value, attr)
+        if temp_list[2].changed:
+            dash.addstr(9 + start_y, 43 + start_x,
+                        temp_list[2].content.value,
+                        style_map[temp_list[2].content.style])
 
-        if cpu_info[1].changed:
-            style= cpu_info[1].content.style
-            attr= bar_style_map[style]
-            width= min(24, cpu_info[1].content.bar_width)
-            cpu_dashboard.hline(10 + start_y, 1 + start_x, " ", width, attr)
-            cpu_dashboard.hline(10 + start_y, 1 + start_x + width, " ", 24 - width)
+        if temp_list[3].changed:
+            width = min(23, temp_list[3].content.bar_width)
+            dash.hline(10 + start_y, 27 + start_x, " ", width,
+                       bar_style_map[temp_list[3].content.style])
+            dash.hline(10 + start_y, 27 + start_x + width, " ", 23 - width)
 
-        if cpu_info[2].changed:
-            style= cpu_info[2].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(9 + start_y, 43 + start_x, cpu_info[2].content.value, attr)
+        if temp_list[4].changed:
+            dash.addstr(2 + start_y, 17 + start_x,
+                        temp_list[4].content.value,
+                        style_map[temp_list[4].content.style])
 
-        if cpu_info[3].changed:
-            style= cpu_info[3].content.style
-            attr= bar_style_map[style]
-            width= min(23, cpu_info[3].content.bar_width)
-            cpu_dashboard.hline(10 + start_y, 27 + start_x, " ", width, attr)
-            cpu_dashboard.hline(10 + start_y, 27 + start_x + width, " ", 23 - width)
+        if temp_list[5].changed:
+            dash.addstr(2 + start_y, 43 + start_x,
+                        temp_list[5].content.value,
+                        style_map[temp_list[5].content.style])
 
-        if cpu_info[4].changed:
-            style= cpu_info[4].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(2 + start_y, 17 + start_x, cpu_info[4].content.value, attr)
+        # CPU Pressure
+        pressure_list = self.__diff_engine_pressure.is_content_diff
+        if pressure_list[0].changed:
+            dash.addstr(6 + start_y, 2 + start_x,
+                        pressure_list[0].content.value,
+                        style_map[pressure_list[0].content.style])
+        if pressure_list[1].changed:
+            dash.addstr(6 + start_y, 11 + start_x,
+                        pressure_list[1].content.value,
+                        style_map[pressure_list[1].content.style])
+        if pressure_list[2].changed:
+            dash.addstr(6 + start_y, 20 + start_x,
+                        pressure_list[2].content.value,
+                        style_map[pressure_list[2].content.style])
+        if pressure_list[3].changed:
+            dash.addstr(5 + start_y, 39 + start_x,
+                        pressure_list[3].content.value,
+                        style_map[pressure_list[3].content.style])
+        if pressure_list[4].changed:
+            width = min(23, pressure_list[4].content.bar_width)
+            dash.hline(6 + start_y, 27 + start_x, " ", width,
+                       bar_style_map[pressure_list[4].content.style])
+            dash.hline(6 + start_y, 27 + start_x + width, " ", 23 - width)
 
-        if cpu_info[5].changed:
-            style= cpu_info[5].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(2 + start_y, 43 + start_x, cpu_info[5].content.value, attr)
-
-        if cpu_pressure[0].changed:
-            style= cpu_pressure[0].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(6 + start_y, 2 + start_x, cpu_pressure[0].content.value, attr)
-
-        if cpu_pressure[1].changed:
-            style= cpu_pressure[1].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(6 + start_y, 11 + start_x, cpu_pressure[1].content.value, attr)
-
-        if cpu_pressure[2].changed:
-            style= cpu_pressure[2].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(6 + start_y, 20 + start_x, cpu_pressure[2].content.value, attr)
-
-        if cpu_pressure[3].changed:
-            style= cpu_pressure[3].content.style
-            attr= style_map[style]
-            cpu_dashboard.addstr(5 + start_y, 39 + start_x, cpu_pressure[3].content.value, attr)
-
-        if cpu_pressure[4].changed:
-            style= cpu_pressure[4].content.style
-            attr= bar_style_map[style]
-            width= min(23, cpu_pressure[4].content.bar_width)
-            cpu_dashboard.hline(6 + start_y, 27 + start_x, " ", width, attr)
-            cpu_dashboard.hline(6 + start_y, 27 + start_x + width, " ", 23 - width)
-
-        cpu_dashboard.noutrefresh()
+        dash.noutrefresh()
 
 class CPULoadDashboard:
-
-    __slots__= (
+    __slots__ = (
         "cpu_load_dashboard",
         "nr_of_threads",
         "window_max_columns",
@@ -207,141 +202,133 @@ class CPULoadDashboard:
         "start_x",
         "style_map",
         "bar_style_map",
-        "__cpu_load_content_list",
+        "cpu_info_load",
+        "formatter",
+        "__diff_engine",
+        "__dashboard_disabled",
         "max_bar_width",
         "__cpu_load_positions",
-        "__dashboard_disabled",
-        "last_line_y"
+        "last_line_y",
     )
 
-    def __init__(self, stdscr: curses.window, formatted_content_list: object, nr_of_threads: int, cpu_dashboard_last_y: int) -> object:
+    def __init__(self, stdscr: curses.window, cpu_dashboard_last_y: int, file_path: object):
         self.cpu_load_dashboard = stdscr
-        
-        self.start_y= 3 + cpu_dashboard_last_y
-        self.start_x= 0
+        self.cpu_info_load = CPUInfoLoad(file_path)
+        self.formatter = CPULoadFormatter()
+        self.__diff_engine = ContentDiff()
 
-        self.nr_of_threads= nr_of_threads
-        self.max_bar_width= 1
+        self.nr_of_threads = len(self.cpu_info_load.cpu_load_raw_data)
 
-        #max text width
-        window_max_lines, window_max_columns= stdscr.getmaxyx()
+        self.start_y = 3 + cpu_dashboard_last_y
+        self.start_x = 0
 
-        self.window_max_columns= window_max_columns - 1  - self.start_x #leaves space for edge
-        max_lines= self.window_max_lines= min(24, window_max_lines - self.start_y) #leaves space for the CPU Dashboard and Processes Dashboard
+        window_max_lines, window_max_columns = stdscr.getmaxyx()
+        self.window_max_columns = window_max_columns - 1 - self.start_x
+        max_lines = self.window_max_lines = min(24, window_max_lines - self.start_y)
 
-        #if there's not enough vertical space, disable it. 
-        if window_max_lines < self.start_y + 4: #space for the header
-            self.__dashboard_disabled= True
-            self.last_line_y= 0
-            
+        if window_max_lines < self.start_y + 4:
+            self.__dashboard_disabled = True
+            self.last_line_y = 0
         else:
-            self.__dashboard_disabled= False
-            self.last_line_y= max_lines - 2 #remove the spaces between the cpu dashboard and cpu load dashboard
+            self.__dashboard_disabled = False
+            self.last_line_y = max_lines - 2
 
-        self.__cpu_load_content_list= formatted_content_list
+        self.max_bar_width = 1
+        self.__cpu_load_positions = []
 
-    def assing_style(self):
-        from .style_maps import text_map, bar_map
-
-        self.style_map= text_map
-        self.bar_style_map= bar_map
+    def assign_style(self):
+        from core.style_maps import text_map, bar_map
+        self.style_map = text_map
+        self.bar_style_map = bar_map
 
     def resize(self, stdscr: curses.window, cpu_dashboard_last_y: int):
-        self.cpu_load_dashboard= stdscr
-        window_max_lines, window_max_columns= stdscr.getmaxyx()
+        self.cpu_load_dashboard = stdscr
+        self.start_y = 3 + cpu_dashboard_last_y
 
-        start_y= self.start_y = 3 + cpu_dashboard_last_y
+        window_max_lines, window_max_columns = stdscr.getmaxyx()
+        self.window_max_columns = window_max_columns - 1 - self.start_x
+        self.window_max_lines = min(24, window_max_lines - self.start_y)
 
-        max_lines= self.window_max_lines= min(24, window_max_lines  - start_y) #leaves space for the CPU Dashboard and process window
-        self.window_max_columns= window_max_columns - 1 - self.start_x
-
-        if window_max_lines < start_y + 4:
-            self.__dashboard_disabled= True
-            self.last_line_y= 0
-
+        if window_max_lines < self.start_y + 4:
+            self.__dashboard_disabled = True
+            self.last_line_y = 0
         else:
-            self.__dashboard_disabled= False
-            self.last_line_y= max_lines - 2 #remove the spaces between the cpu dashboard and cpu load dashboard
-            
+            self.__dashboard_disabled = False
+            self.last_line_y = self.window_max_lines - 2
 
         self.draw_static_interface()
 
-    def draw_static_interface(self):
+    def update_data_pipeline(self, schedule: dict):
+        disable_cpu_check= False
+        # Update CPU load readings
+        self.cpu_info_load.get_cpu_load(disable_cpu_check, schedule)
+        # Format the CPU load
+        self.formatter.format_load(self.cpu_info_load, self.max_bar_width, schedule)
+        # Update differences for rendering
+        self.__diff_engine.check_differences(self.formatter.formatted_cpu_load)
 
+    def draw_static_interface(self):
         if self.__dashboard_disabled:
             return
 
-        cpu_load_dashboard = self.cpu_load_dashboard
+        dash = self.cpu_load_dashboard
         start_y = self.start_y
         start_x = self.start_x
         threads = self.nr_of_threads
 
-        # Usable space
-        header_space = 4       # space for title
-        row_height = 2         # height of each CPU bar row
-        min_bar_width = 3      # minimum width per bar
+        header_space = 4
+        row_height = 2
+        min_bar_width = 3
         usable_width = self.window_max_columns
         usable_height = self.window_max_lines - header_space
 
-        # Draw dashboard title
-        cpu_load_dashboard.addstr(start_y + 1, start_x + 15, "CPU Load Dashboard", curses.A_BOLD)
+        dash.addstr(start_y + 1, start_x + 15, "CPU Load Dashboard", curses.A_BOLD)
 
-        # Compute maximum rows that can fit
         max_rows = max(1, usable_height // row_height)
-
-        # Decide number of rows and columns
         rows = min(threads, max_rows)
         columns = -(-threads // rows)  # ceil division
-
-        # Compute column width to evenly fill horizontal space
         col_width = max(min_bar_width, usable_width // columns)
         self.max_bar_width = col_width - 2
 
-        # Draw total CPU bar at top
         cpu_load_positions = []
-        cpu_load_dashboard.addch(start_y + 2, start_x, "[")
-        cpu_load_dashboard.addch(start_y + 2, start_x + col_width, "]")
+
+        # Draw total CPU bar
+        dash.addch(start_y + 2, start_x, "[")
+        dash.addch(start_y + 2, start_x + col_width, "]")
         cpu_load_positions.append((start_y + 2, start_x))
 
-        # Draw per-core CPU bars row by row
+        # Draw per-core bars
         for idx in range(threads - 1):
             row = idx // columns
             col = idx % columns
-
             y = start_y + header_space + row * row_height
             x = start_x + col * col_width
-
             if y >= start_y + usable_height:
-                break  # don’t draw outside available vertical space
-
-            cpu_load_dashboard.addch(y, x, "[")
-            cpu_load_dashboard.addch(y, x + col_width, "]")
+                break
+            dash.addch(y, x, "[")
+            dash.addch(y, x + col_width, "]")
             cpu_load_positions.append((y, x))
 
         self.__cpu_load_positions = cpu_load_positions
-        cpu_load_dashboard.noutrefresh()
+        dash.noutrefresh()
 
     def render(self):
         if self.__dashboard_disabled:
             return
-        
-        #assign local references
-        cpu_load_dashboard= self.cpu_load_dashboard
-        cpu_load_positions= self.__cpu_load_positions
-        content_list= self.__cpu_load_content_list.formatted_cpu_load
-        bar_style_map= self.bar_style_map
-        max_bar_width= self.max_bar_width
 
-        for idx, content_obj in enumerate(content_list):
-            style= content_obj.style
-            attr_bar= bar_style_map[style]
+        dash = self.cpu_load_dashboard
+        positions = self.__cpu_load_positions
+        content_list = self.formatter.formatted_cpu_load
+        bar_map = self.bar_style_map
+        max_width = self.max_bar_width
 
-            if idx > len(cpu_load_positions) - 1:
+        for idx, content in enumerate(content_list):
+            if idx >= len(positions):
                 break
-            
-            cpu_load_bar_width= content_obj.bar_width
-            #the bar is "overlayed" over the text
-            cpu_load_dashboard.addnstr(cpu_load_positions[idx][0], cpu_load_positions[idx][1] + 1, content_obj.value[:cpu_load_bar_width], max_bar_width, attr_bar)  #write text until content[cpu].bar_width
-            cpu_load_dashboard.addnstr(cpu_load_positions[idx][0], cpu_load_positions[idx][1] + cpu_load_bar_width + 1, content_obj.value[cpu_load_bar_width:], max(1, max_bar_width - cpu_load_bar_width))      
+            width = content.bar_width
+            dash.addnstr(positions[idx][0], positions[idx][1] + 1,
+                         content.value[:width], max_width, bar_map[content.style])
+            dash.addnstr(positions[idx][0], positions[idx][1] + width + 1,
+                         content.value[width:], max(1, max_width - width))
 
-        cpu_load_dashboard.noutrefresh()
+        dash.noutrefresh()

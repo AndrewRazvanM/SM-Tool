@@ -1,17 +1,12 @@
-class SystemPressure:
+class MemPressure:
     """
-    Check for io, cpu and memory pressure. Each can be disabled individually.
+    Check for memory pressure. Can be disabled individually.
       Requires as an argument the object that stores the open files.
     """
     __slots__ =(
-          "cpu_avg10",
-          "cpu_avg60",
-          "cpu_avg300",
           "memory_some",
           "memory_full",
           "memory_health",
-          "io_some",
-          "io_full",
           "file_paths"
      )
 
@@ -19,11 +14,6 @@ class SystemPressure:
         self.file_paths= file_paths
         self.memory_some= ["N/A"] * 3 #pre-allocating list size. Excluding total from file
         self.memory_full= ["N/A"] * 3 #pre-allocating list size
-        self.io_some= ["N/A"] * 3
-        self.io_full= ["N/A"] * 3
-        self.cpu_avg10= "N/A"
-        self.cpu_avg60= "N/A"
-        self.cpu_avg300= "N/A"
         self.memory_health= ("N/A", 0) #tuplet with Score as int, and the health_bar width
 
 
@@ -62,6 +52,24 @@ class SystemPressure:
 
         return memory_check_disable
     
+class CPUPressure:
+    """
+    Check for cpu pressure. Can be disabled individually.
+      Requires as an argument the object that stores the open files.
+    """
+    __slots__ =(
+          "cpu_avg10",
+          "cpu_avg60",
+          "cpu_avg300",
+          "file_paths"
+     )
+
+    def __init__(self, file_paths: object):
+        self.file_paths= file_paths
+        self.cpu_avg10= "N/A"
+        self.cpu_avg60= "N/A"
+        self.cpu_avg300= "N/A"
+    
     def read_cpu(self, cpu_check_disable: bool, schedule: dict):
         if schedule["cpu"] is False:
             return
@@ -84,6 +92,23 @@ class SystemPressure:
                  cpu_check_disable= True
         
         return cpu_check_disable
+    
+class IOPressure:
+    """
+    Check for io pressure. Can be disabled individually.
+      Requires as an argument the object that stores the open files.
+    """
+    __slots__ =(
+          "io_some",
+          "io_full",
+          "file_paths"
+     )
+
+    def __init__(self, file_paths: object):
+        self.file_paths= file_paths
+        self.io_some= ["N/A"] * 3
+        self.io_full= ["N/A"] * 3
+
 
     def read_io(self, io_check_disable):
         file_paths= self.file_paths

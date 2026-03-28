@@ -1,4 +1,7 @@
 import curses
+from readings.nvidia import Nvidia
+from ui.formatters import NvidiaFormatter
+from ui.contentdiff import ContentDiff
 
 class NvidiaDashboard:
 
@@ -10,17 +13,19 @@ class NvidiaDashboard:
         "start_x",
         "style_map",
         "bar_style_map",
-        "__nvidia_content_list",
-        "__dashboard_disabled",
-        "gpu_name_list",
+        "formatter",
+        "nvidia_service",
+        "__diff_engine",
+        "__dashboard_disabled"
     )
 
-    def __init__(self, stdscr: curses.window, content_diff_engine: object, gpu_name_list: list) -> object:
+    def __init__(self, stdscr: curses.window) -> object:
         self.nvidia_dashboard = stdscr
         
         self.start_y= 3
         self.start_x= 50 + 48 + 50 + 2 #other dashboard column width
-        self.gpu_name_list= gpu_name_list
+        self.nvidia_service= Nvidia()
+        self.formatter= NvidiaFormatter()
 
         #max text width
         window_max_lines, window_max_columns= stdscr.getmaxyx()
@@ -32,10 +37,10 @@ class NvidiaDashboard:
         else:
             self.__dashboard_disabled= True
 
-        self.__nvidia_content_list= content_diff_engine()
+        self.__diff_engine= ContentDiff()
 
-    def assing_style(self):
-        from .style_maps import text_map, bar_map
+    def assign_style(self):
+        from core.style_maps import text_map, bar_map
 
         self.style_map= text_map
         self.bar_style_map= bar_map
@@ -46,15 +51,20 @@ class NvidiaDashboard:
 
         if window_max_lines >= 13 + self.start_y and window_max_columns > 50 + self.start_x:
             self.__dashboard_disabled= False
-            self.__nvidia_content_list.force_write= True
+            self.__diff_engine.force_write= True
         else:
             self.__dashboard_disabled= True
             
 
         self.draw_static_interface()
 
-    def check_content_diff(self, nvidia_content_list: list) -> list:
-        self.__nvidia_content_list.check_differences(nvidia_content_list)
+    def update_data_pipeline(self, schedule: dict) -> list:
+        nvidia_service= self.nvidia_service
+        formated_data= self.formatter
+
+        nvidia_service.get_nvidia_gpu_readings(schedule)
+        formated_data.format(nvidia_service.gpus_readings, schedule)
+        self.__diff_engine.check_differences(formated_data.formatted_nvidia_output)
 
     def draw_static_interface(self):
 
@@ -62,6 +72,7 @@ class NvidiaDashboard:
             return
         
         nvidia_dashboard= self.nvidia_dashboard
+        gpu_name_list= self.nvidia_service.gpu_name_list
 
         #starting position
         start_y= self.start_y 
@@ -84,7 +95,7 @@ class NvidiaDashboard:
         #add title
         nvidia_dashboard.addstr(start_y+ 0, start_x+ 15, "nVidia Dashboard", curses.A_BOLD)
 
-        nvidia_dashboard.addstr(start_y+ 1, max(1, (49 - len(self.gpu_name_list[0]))//2) + start_x + 1, f"{self.gpu_name_list[0]}"[:49])
+        nvidia_dashboard.addstr(start_y+ 1, max(1, (49 - len(gpu_name_list[0]))//2) + start_x + 1, f"{gpu_name_list[0]}"[:49])
         nvidia_dashboard.hline(start_y+ 2, start_x + 1, "=", 49)
         nvidia_dashboard.addstr(start_y+ 3, start_x + 1, "Temperature:")
         nvidia_dashboard.addstr(start_y+ 5, start_x + 1, "Clock Speed:")
@@ -99,7 +110,7 @@ class NvidiaDashboard:
             return
         
         nvidia_dashboard= self.nvidia_dashboard
-        content_list= self.__nvidia_content_list.is_content_diff
+        content_list= self.__diff_engine.is_content_diff
 
         #starting position
         start_y= self.start_y 

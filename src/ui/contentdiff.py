@@ -103,11 +103,15 @@ class ScrollWinContentDiff:
         seen = self._seen_pids
         prev_order = self._prev_order
 
+        render_list_len= len(render_list)
+        visible_rows_len= len(visible_rows)
+        prev_order_len= len(prev_order)
+
         seen.clear()
 
         # Ensure render_list is large enough
-        if len(render_list) < len(visible_rows):
-            render_list.extend([None] * (len(visible_rows) - len(render_list)))
+        if render_list_len < visible_rows_len:
+            render_list.extend([None] * (visible_rows_len - render_list_len))
 
         for row_index, row in enumerate(visible_rows):
             pid = row[0].value
@@ -129,7 +133,7 @@ class ScrollWinContentDiff:
 
             # Detect scroll movement
             moved = (
-                row_index >= len(prev_order)
+                row_index >= prev_order_len
                 or prev_order[row_index] != pid
             )
 
@@ -157,12 +161,12 @@ class ScrollWinContentDiff:
             render_list[row_index] = entry
 
         # Trim render list if fewer rows visible
-        del render_list[len(visible_rows):]
+        del render_list[visible_rows_len:]
 
         # Remove dead processes
-        for pid in list(pid_map.keys()):
-            if pid not in seen:
-                del pid_map[pid]
+        dead_pids = pid_map.keys() - seen
+        for pid in dead_pids:
+            del pid_map[pid]
 
         # Save PID order for next frame
         self._prev_order = [row[0].value for row in visible_rows]

@@ -17,7 +17,7 @@ class ProcessDashboard:
         "bar_map",
         "__sorted_process_content_list",
         "__dashboard_disabled",
-        "content_diff",
+        "__diff_engine",
         "positions_list",
         "process_list",
         "process_services",
@@ -29,7 +29,7 @@ class ProcessDashboard:
         self.process_dashboard = stdscr
         self.process_services= ProcessMonitor(file_path)
         self.process_formatter= ProcessFormatter()
-        self.content_diff= ScrollWinContentDiff()
+        self.__diff_engine= ScrollWinContentDiff()
         self.sorter= sorter
         self.process_list= {}
         
@@ -46,13 +46,13 @@ class ProcessDashboard:
         else:
             self.__dashboard_disabled= True
 
-    def update_data_pipeline(self, schedule):
+    def update_data_pipeline(self, schedule: dict):
         self.process_services.update(schedule, self.process_list)
         self.sorter(self.process_list, schedule)
         self.process_formatter.format(self.process_list, self.process_services, schedule)
 
-    def assing_style(self):
-        from .style_maps import text_map, bar_map
+    def assign_style(self):
+        from core.style_maps import text_map, bar_map
 
         self.style_map= text_map
         self.bar_map= bar_map
@@ -80,7 +80,7 @@ class ProcessDashboard:
 
         self.__sorted_process_content_list= process_list[scroll_pos: scroll_pos + self.window_max_lines]
 
-        self.content_diff.check_differences(self.__sorted_process_content_list)
+        self.__diff_engine.check_differences(self.__sorted_process_content_list)
 
         return scroll_pos
 
@@ -96,8 +96,8 @@ class ProcessDashboard:
         __widths = [
             10,   # PID
             10,   # PPID
-            16,  # RunningUnder
-            9,   # Priority
+            14,  # RunningUnder
+            5,   # Priority
             7,   # State
             10,  # UpTime
             9,   # Threads
@@ -112,7 +112,7 @@ class ProcessDashboard:
             "PID",
             "PPID",
             "RunningUnder",
-            "Priority",
+            "Prio",
             "State",
             "UpTime",
             "Threads",
@@ -158,7 +158,7 @@ class ProcessDashboard:
 
         style_map= self.style_map
 
-        content= self.content_diff.is_content_diff
+        content= self.__diff_engine.is_content_diff
         process_dashboard= self.process_dashboard
 
         for row_idx, process_obj in enumerate(content):

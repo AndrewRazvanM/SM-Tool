@@ -1,10 +1,4 @@
-class TextStyle:
-    __slots__ = ("value", "style", "bar_width")
-
-    def __init__(self, text: str, style: int, bar_width= 0):
-        self.value = text
-        self.style = style
-        self.bar_width= bar_width
+from core.formatter_threshdolds import SOME_THRESHOLDS, SOME_300_THRESHOLDS, FULL_THRESHOLDS, FULL_300_THRESHOLDS, CPU_AVG10_THRESHOLDS, CPU_AVG300_THRESHOLDS, CPU_AVG60_THRESHOLDS, CPU_HEALTH_THRESHOLDS
 
 def time_formatter(sec:float) -> str:
     """
@@ -15,207 +9,129 @@ def time_formatter(sec:float) -> str:
     m, s = divmod(remainder, 60)
     return f"{h:02}:{m:02}:{s:02} "
 
-class PressureFormatter:
-    """
-    Formats text and decides the state (0=good, 1=warning, 2=critical, 3=muted, 4=blue) for:
-     cpu pressure
-     memory pressure
-     io pressure
-    """
-    __slots__= (
-        "cpu_formatted_output",
-        "memory_formatted_output",
-        "io_formatted_output",
-    )
-    
+def classify_pressure(value, thresholds):
+    if value == "N/A":
+        return 3
+    for limit, state in thresholds:
+        if value < limit:
+            return state
+
+class TextStyle:
+    __slots__ = ("value", "style", "bar_width")
+
+    def __init__(self, text: str, style: int, bar_width= 0):
+        self.value = text
+        self.style = style
+        self.bar_width= bar_width
+
+class CPUPressureFormatter:
+    __slots__ = ("formatted_output",)
+
     def __init__(self):
-        self.cpu_formatted_output= [TextStyle("N/A", 3) for _ in range(5)]
+        self.formatted_output = [TextStyle("N/A", 3) for _ in range(5)]
 
-        self.memory_formatted_output= [TextStyle("N/A", 3) for _ in range(8)]
-
-        self.io_formatted_output= [TextStyle("N/A", 3) for _ in range(3)]
-
-    def format_cpu(self, system_pressure_readings: object, schedule: dict) -> list:
-        """
-        Formats the cpu pressure and determines reading state(0=good, 1=warning, 2=critical, 3=muted, 4=none) if they did.
-        """
-        if schedule["cpu"] is False:
+    def format(self, system_pressure_readings: object, schedule: dict):
+        if not schedule["cpu"]:
             return
-        cpu_formatted_output= self.cpu_formatted_output
-        cpu_avg10= system_pressure_readings.cpu_avg10
-        cpu_avg60= system_pressure_readings.cpu_avg60
-        cpu_avg300= system_pressure_readings.cpu_avg300
 
+        out = self.formatted_output
+        txt_max_len= 5 
+
+        cpu_avg10 = system_pressure_readings.cpu_avg10
+        cpu_avg60 = system_pressure_readings.cpu_avg60
+        cpu_avg300 = system_pressure_readings.cpu_avg300
+
+        # --- Compute health ---
         if cpu_avg10 == "N/A":
-            cpu_pressure_health= "N/A"
-            cpu_pressure_bar_width= 0
-            cpu_pressure_health_state= 3
-            cpu_pressure_bar_state= 3
-
+            cpu_pressure_health = "N/A"
+            cpu_pressure_bar_width = 0
+            cpu_pressure_state = 3
         else:
-            penalty_cpu= cpu_avg10 * 2.0 + cpu_avg60 * 6.0 + cpu_avg300 * 50.0
-            cpu_pressure_health= max(0, 100 - penalty_cpu)
-            cpu_pressure_bar_width= int(cpu_pressure_health//4.3)
+            penalty = cpu_avg10 * 2.0 + cpu_avg60 * 6.0 + cpu_avg300 * 50.0
+            cpu_pressure_health = max(0.0, 100.0 - penalty)
 
-            if cpu_pressure_bar_width < 1:
-                cpu_pressure_bar_width= 1
-            elif cpu_pressure_bar_width > 23:
-                cpu_pressure_bar_width= 23
+            cpu_pressure_bar_width = int(cpu_pressure_health // 4.3)
+            cpu_pressure_bar_width = max(1, min(cpu_pressure_bar_width, 23))
 
-            if cpu_pressure_health > 90:
-                cpu_pressure_health_state= 0
-                cpu_pressure_bar_state= 0
-            elif cpu_pressure_health > 80:
-                cpu_pressure_health_state= 1
-                cpu_pressure_bar_state= 1
-            else:
-                cpu_pressure_health_state= 2
-                cpu_pressure_bar_state= 2
+            cpu_pressure_state = classify_pressure(cpu_pressure_health, CPU_HEALTH_THRESHOLDS)
 
-        #determine the cpu state
-        if cpu_avg10 == "N/A":
-            cpu_avg10_state= 3
-        elif cpu_avg10 <= 1.0:
-            cpu_avg10_state= 0
-        elif cpu_avg10 < 5.0:
-            cpu_avg10_state= 1
-        else:
-            cpu_avg10_state= 2
+        # --- Classify averages ---
+        avg10_state = classify_pressure(cpu_avg10, CPU_AVG10_THRESHOLDS)
+        avg60_state = classify_pressure(cpu_avg60, CPU_AVG60_THRESHOLDS)
+        avg300_state = classify_pressure(cpu_avg300, CPU_AVG300_THRESHOLDS)
 
-        if cpu_avg60 == "N/A":
-            cpu_avg60_state= 3
-        elif cpu_avg60 <= 1.0:
-            cpu_avg60_state= 0
-        elif cpu_avg60 < 3.0:
-            cpu_avg60_state= 1
-        else:
-            cpu_avg60_state= 2
+        # --- Write output ---
+        out[0].value = f"{cpu_avg10:<5}"
+        out[0].style = avg10_state
 
-        if cpu_avg300 == "N/A":
-            cpu_avg300_state= 3
-        elif cpu_avg300 <= 0.5:
-            cpu_avg300_state= 0
-        elif cpu_avg300 < 1.0:
-            cpu_avg300_state= 1
-        else:
-            cpu_avg300_state= 2
+        out[1].value = f"{cpu_avg60:<5}"
+        out[1].style = avg60_state
+
+        out[2].value = f"{cpu_avg300:<5}"
+        out[2].style = avg300_state
+
+        out[3].value = f"{cpu_pressure_health:<5.1f}" if cpu_pressure_health != "N/A" else "N/A"
+        out[3].style = cpu_pressure_state
+
+        out[4].bar_width = cpu_pressure_bar_width
+        out[4].style = cpu_pressure_state
+
+        self.formatted_output = out
+
+class MemoryPressureFormatter:
+    __slots__ = ("formatted_output",)
+
+    def __init__(self):
+        self.formatted_output = [TextStyle("N/A", 3) for _ in range(8)]
 
 
-        cpu_formatted_output[0].value = f"{cpu_avg10:<5}"
-        cpu_formatted_output[0].style = cpu_avg10_state
-        cpu_formatted_output[1].value = f"{cpu_avg60:<5}"
-        cpu_formatted_output[1].style = cpu_avg60_state
-        cpu_formatted_output[2].value = f"{cpu_avg300:<5}"
-        cpu_formatted_output[2].style = cpu_avg300_state
-        cpu_formatted_output[3].value= f"{cpu_pressure_health:<5.1f}"
-        cpu_formatted_output[3].style= cpu_pressure_health_state
-        cpu_formatted_output[4].bar_width= cpu_pressure_bar_width
-        cpu_formatted_output[4].style= cpu_pressure_bar_state
-
-        self.cpu_formatted_output= cpu_formatted_output
-
-    def format_mem(self, system_pressure_readings:object, schedule: dict) -> list:
-        if schedule["memory"] is False:
+    def format_mem(self, system_pressure_readings: object, schedule: dict) -> list:
+        if not schedule["memory"]:
             return
-        
-        memory_some= system_pressure_readings.memory_some
-        memory_full= system_pressure_readings.memory_full
-        memory_formatted_output= self.memory_formatted_output
-        memory_health= system_pressure_readings.memory_health
 
-        some_avg10= memory_some[0]
-        some_avg60= memory_some[1]
-        some_avg300= memory_some[2]
+        memory_some = system_pressure_readings.memory_some
+        memory_full = system_pressure_readings.memory_full
+        memory_health = system_pressure_readings.memory_health
 
-        full_avg10= memory_full[0]
-        full_avg60= memory_full[1]
-        full_avg300= memory_full[2]
+        out = self.formatted_output
 
-        if some_avg10 == "N/A":
-            some_avg10_state= 3
-        elif some_avg10 < 1.0:
-            some_avg10_state= 0
-        elif some_avg10 < 5.0:
-            some_avg10_state= 1
+        s10, s60, s300 = memory_some
+        f10, f60, f300 = memory_full
+
+        # --- classify states ---
+        s10_state = classify_pressure(s10, SOME_THRESHOLDS)
+        s60_state = classify_pressure(s60, SOME_THRESHOLDS)
+        s300_state = classify_pressure(s300, SOME_300_THRESHOLDS)
+
+        f10_state = classify_pressure(f10, FULL_THRESHOLDS)
+        f60_state = classify_pressure(f60, FULL_THRESHOLDS)
+        f300_state = classify_pressure(f300, FULL_300_THRESHOLDS)
+
+        # --- health classification ---
+        health_score = memory_health[0]
+        if health_score == "N/A":
+            score_state = 3
+            bar_state = 3
         else:
-            some_avg10_state= 2
+            score_state = 0 if health_score > 80 else 1 if health_score > 60 else 2
+            bar_state = score_state
 
-        if some_avg60 == "N/A":
-            some_avg60_state= 3
-        elif some_avg60 < 1.0:
-            some_avg60_state= 0
-        elif some_avg60 < 5.0:
-            some_avg60_state= 1
-        else:
-            some_avg60_state= 2
+        # --- write output ---
+        out[0].value, out[0].style = f"{s10:<5}", s10_state
+        out[1].value, out[1].style = f"{s60:<5}", s60_state
+        out[2].value, out[2].style = f"{s300:<5}", s300_state
 
-        if some_avg300 == "N/A":
-            some_avg300_state= 3
-        elif some_avg300 < 0.5:
-            some_avg300_state= 0
-        elif some_avg300 < 2.0:
-            some_avg300_state= 1
-        else:
-            some_avg300_state= 2
+        out[3].value, out[3].style = f"{f10:<5}", f10_state
+        out[4].value, out[4].style = f"{f60:<5}", f60_state
+        out[5].value, out[5].style = f"{f300:<5}", f300_state
 
-        if full_avg10 == "N/A":
-            full_avg10_state= 3
-        elif full_avg10 < 0.5:
-            full_avg10_state= 0
-        elif full_avg10 < 1.0:
-            full_avg10_state= 1
-        else:
-            full_avg10_state= 2
+        out[6].value = f"{health_score:<5.1f}" if health_score != "N/A" else "N/A"
+        out[6].style = score_state
 
-        if full_avg60 == "N/A":
-            full_avg60_state= 3
-        elif full_avg60 < 0.5:
-            full_avg60_state= 0
-        elif full_avg60 < 1.0:
-            full_avg60_state= 1
-        else:
-            full_avg60_state= 2
+        out[7].bar_width = memory_health[1]
+        out[7].style = bar_state
 
-        if full_avg300 == "N/A":
-            full_avg300_state= 3
-        elif full_avg300 < 0.1:
-            full_avg300_state= 0
-        elif full_avg300 < 0.5:
-            full_avg300_state= 1
-        else:
-            full_avg300_state= 2
-
-        if memory_health[0] == "N/A":
-            mem_score_state= 3
-            mem_bar_state= 3
-        elif memory_health[0] >80:
-            mem_score_state= 0
-            mem_bar_state= 0
-        elif memory_health[0] >60:
-            mem_score_state= 1
-            mem_bar_state= 1
-        else:
-            mem_score_state= 2
-            mem_bar_state= 2
-
-        memory_formatted_output[0].value= f"{some_avg10:<5}"
-        memory_formatted_output[0].style= some_avg10_state
-        memory_formatted_output[1].value= f"{some_avg60:<5}"
-        memory_formatted_output[1].style= some_avg60_state
-        memory_formatted_output[2].value= f"{some_avg300:<5}"
-        memory_formatted_output[2].style= some_avg300_state
-        memory_formatted_output[3].value= f"{full_avg10:<5}"
-        memory_formatted_output[3].style= full_avg10_state
-        memory_formatted_output[4].value= f"{full_avg60:<5}"
-        memory_formatted_output[4].style= full_avg60_state
-        memory_formatted_output[5].value= f"{full_avg300:<5}"
-        memory_formatted_output[5].style= full_avg300_state
-        memory_formatted_output[6].value= f"{memory_health[0]:<5.1f}"
-        memory_formatted_output[6].style= mem_score_state
-        memory_formatted_output[7].bar_width= memory_health[1]
-        memory_formatted_output[7].style= mem_bar_state
-
-        self.memory_formatted_output= memory_formatted_output
+        self.formatted_output= out
 
 class MemoryFormatter:
     """
@@ -224,11 +140,11 @@ class MemoryFormatter:
     """
 
     __slots__ = (
-        "memory_info_formatted_output",
+        "formatted_output",
     )
 
     def __init__(self):
-        self.memory_info_formatted_output= [TextStyle("N/A", 3) for _ in range(4)]
+        self.formatted_output= [TextStyle("N/A", 3) for _ in range(4)]
 
     def format(self, memory_info_readings: object, schedule: dict) -> list:
         if schedule["memory"] is False:
@@ -238,7 +154,7 @@ class MemoryFormatter:
         mem_available= memory_info_readings.MemAvailable
         swap_total= memory_info_readings.SwapTotal
         swap_free= memory_info_readings.SwapFree
-        memory_info_formatted_output= self.memory_info_formatted_output
+        memory_info_formatted_output= self.formatted_output
 
         if mem_total < 1000:
             mem_total= f"{mem_total} kB"
@@ -289,136 +205,110 @@ class MemoryFormatter:
         memory_info_formatted_output[3].value= swap_free[:6] 
         memory_info_formatted_output[3].style= swap_free_style
 
-class CPUFormatter:
+        self.formatted_output= memory_info_formatted_output
+
+class CPUTempFormatter:
     """
-    Formats text and decides state (0=good, 1=warning, 2=critical, 3=muted, 4=blue) for:
-        cpu_readings: Temp and Fan
-        cpu_load
+    Formats CPU temperature and fan info into TextStyle objects.
     """
 
-    __slots__=("formatted_cpu_readings", "formatted_cpu_load")
+    __slots__ = ("formatted_cpu_readings",)
 
     def __init__(self):
-        self.formatted_cpu_readings= []
-        self.formatted_cpu_readings.extend([
-                TextStyle("N/A", 3),
-                TextStyle(" ", 3, 1),
-                TextStyle("N/A", 3),
-                TextStyle(" ", 3, 1),
-                TextStyle("N/A", 3),
-                TextStyle("N/A", 3),
-            ])
-        self.formatted_cpu_load= []
+        # Initial placeholder values
+        self.formatted_cpu_readings = [
+            TextStyle("N/A", 3),
+            TextStyle(" ", 3, 1),
+            TextStyle("N/A", 3),
+            TextStyle(" ", 3, 1),
+            TextStyle("N/A", 3),
+            TextStyle("N/A", 3),
+        ]
 
-    def format_info(self, cpu_readings: object, schedule: dict) -> list:
-        if schedule["cpu"] is False:
+    def format_info(self, cpu_readings: object, schedule: dict):
+        if not schedule.get("cpu", True):
             return
-        
-        cpu_temp_dict= cpu_readings.cpu_temp
-        cpu_fan_dict= cpu_readings.cpu_fan
-        formatted_cpu_readings= self.formatted_cpu_readings
 
-        if cpu_readings.cpu_load_raw_data is not None:
-            num_threads= len(cpu_readings.cpu_load_raw_data) - 1
-            num_cpu_threads_state= 0
-
-        else:
-            num_threads= "N/A"
-            num_cpu_threads_state= 3
+        cpu_temp_dict = cpu_readings.cpu_temp
+        formatted = self.formatted_cpu_readings
 
         if cpu_temp_dict is None:
-            cpu_temp_dict= {}
             return
-        
-        cpu_temp_dict_length= len(cpu_temp_dict)
-        num_cpu_core_state=  0
 
+        cpu_temp_dict_length = len(cpu_temp_dict)
+        num_cpu_core_state = 0
+
+        # Package id 0
         if "Package id 0" in cpu_temp_dict:
-            cpu_temp_dict_length-= 1
-            die_temperature_val= cpu_temp_dict["Package id 0"].temp
-            die_temp= f"{die_temperature_val:>3} °C"
-
-            if die_temperature_val <70:
-                die_temp_state= 0
-                die_temp_bar_state= 0
-            elif die_temperature_val <85:
-                die_temp_state= 1
-                die_temp_bar_state= 1
-            else:
-                die_temp_state= 2
-                die_temp_bar_state= 2
-            
-            die_temp_bar_width= min(24, die_temperature_val//4)
-
+            cpu_temp_dict_length -= 1
+            die_temp_val = cpu_temp_dict["Package id 0"].temp
+            die_temp = f"{die_temp_val:>3} °C"
+            die_temp_state = 0 if die_temp_val < 70 else 1 if die_temp_val < 85 else 2
+            die_temp_bar_state = die_temp_state
+            die_temp_bar_width = min(24, die_temp_val // 4)
         else:
-            die_temp= "N/A   " #padding with extra spaces manually
-            die_temp_state= 3
-            die_temp_bar_width= 0
-            die_temp_bar_state= 3
+            die_temp = "N/A   "
+            die_temp_state = die_temp_bar_state = 3
+            die_temp_bar_width = 0
 
+        # Average
         if "Average" in cpu_temp_dict:
-            cpu_temp_dict_length-= 1
-            average_temp_val= cpu_temp_dict["Average"]
-            average_temp= f"{average_temp_val:>3} °C"
-
-            if average_temp_val <70:
-                average_temp_state= 0
-                average_temp_bar_state= 0
-            elif average_temp_val <85:
-                average_temp_state= 1
-                average_temp_bar_state= 1
-            else:
-                average_temp_state= 2
-                average_temp_bar_state= 2
-
-            average_temp_bar_width= min(23, average_temp_val//4)
-
+            cpu_temp_dict_length -= 1
+            avg_val = cpu_temp_dict["Average"]
+            average_temp = f"{avg_val:>3} °C"
+            average_temp_state = 0 if avg_val < 70 else 1 if avg_val < 85 else 2
+            average_temp_bar_state = average_temp_state
+            average_temp_bar_width = min(23, avg_val // 4)
         else:
-            average_temp= "N/A   " #padding with extra spaces manually
-            average_temp_state= 3
-            average_temp_bar_width= 0
-            average_temp_bar_state= 0
+            average_temp = "N/A   "
+            average_temp_state = average_temp_bar_state = 3
+            average_temp_bar_width = 0
 
-        num_cpu_threads= f" {num_threads:<4}"
-        num_cpu_core= f" {cpu_temp_dict_length:<4}"
-        formatted_cpu_readings[0].value= die_temp 
-        formatted_cpu_readings[0].style= die_temp_state
-        formatted_cpu_readings[1].bar_width = die_temp_bar_width
-        formatted_cpu_readings[1].style= die_temp_bar_state
-        formatted_cpu_readings[2].value= average_temp
-        formatted_cpu_readings[2].style=average_temp_state
-        formatted_cpu_readings[3].bar_width= average_temp_bar_width
-        formatted_cpu_readings[3].style= average_temp_bar_state
-        formatted_cpu_readings[4].value= num_cpu_core
-        formatted_cpu_readings[4].style= num_cpu_core_state
-        formatted_cpu_readings[5].value= num_cpu_threads
-        formatted_cpu_readings[5].style= num_cpu_threads_state
+        num_cpu_threads = f" {(cpu_temp_dict_length * 2):<4}"
+        num_cpu_core = f" {cpu_temp_dict_length:<4}"
 
-        self.formatted_cpu_readings= formatted_cpu_readings
-        
+        # Update formatted TextStyle objects
+        formatted[0].value, formatted[0].style = die_temp, die_temp_state
+        formatted[1].bar_width, formatted[1].style = die_temp_bar_width, die_temp_bar_state
+        formatted[2].value, formatted[2].style = average_temp, average_temp_state
+        formatted[3].bar_width, formatted[3].style = average_temp_bar_width, average_temp_bar_state
+        formatted[4].value, formatted[4].style = num_cpu_core, num_cpu_core_state
+        formatted[5].value, formatted[5].style = num_cpu_threads, 3
+
+        self.formatted_cpu_readings = formatted
+
+class CPULoadFormatter:
+    """
+    Formats CPU load into TextStyle objects.
+    """
+
+    __slots__ = ("formatted_cpu_load",)
+
+    def __init__(self):
+        self.formatted_cpu_load = []
+
     def format_load(self, raw_cpu_load: object, cpu_load_bar_ratio: int, schedule: dict) -> list:
-        if schedule["cpu"] is False:
+        if not schedule.get("cpu", True):
             return
-        
-        cpu_load= raw_cpu_load.cpu_load
-        formatted_cpu_load= self.formatted_cpu_load
 
-        if formatted_cpu_load == []:
-            formatted_cpu_load= [TextStyle("N/A", 3) for _ in cpu_load]
+        cpu_load = raw_cpu_load.cpu_load
+        formatted = self.formatted_cpu_load
 
-        for index, cpu in enumerate(cpu_load):
-            cpu_load_value= cpu_load[cpu]
-                
-            text= f"{cpu}: {cpu_load_value} {"%":<{cpu_load_bar_ratio}}"[:cpu_load_bar_ratio - 1]
-            formatted_cpu_load[index].value= text
-            formatted_cpu_load[index].style= 0
+        if not formatted:
+            formatted = [TextStyle("N/A", 3) for _ in cpu_load]
 
-            if cpu_load_value == "N/A" or cpu_load_value is None:
-                formatted_cpu_load[index].bar_width= 0
+        for idx, cpu in enumerate(cpu_load):
+            val = cpu_load[cpu]
+            text = f"{cpu}: {val}%"[:cpu_load_bar_ratio - 1]  # Truncate if necessary
+            formatted[idx].value = text
+            formatted[idx].style = 0
+
+            if val in (None, "N/A"):
+                formatted[idx].bar_width = 0
             else:
-                formatted_cpu_load[index].bar_width= int((cpu_load_value / 100) * cpu_load_bar_ratio)
+                formatted[idx].bar_width = int((val / 100) * cpu_load_bar_ratio)
 
-        self.formatted_cpu_load= formatted_cpu_load
+        self.formatted_cpu_load = formatted
 
 class NetworkFormatter:
 
@@ -429,11 +319,11 @@ class NetworkFormatter:
     def __init__(self):
         self.formatted_network_output= [TextStyle(" ", 0) for _ in range(10)]
 
-    def format(self, network_readings: object, schedule: dict) -> list:
+    def format(self, network_readings: dict, schedule: dict):
         if schedule["network"] is False:
             return
         
-        network_throughput= network_readings.throughput
+        network_throughput= network_readings
         formatted_network_output= self.formatted_network_output
 
         total_received= 0
@@ -519,11 +409,11 @@ class NvidiaFormatter:
     def __init__(self):
         self.formatted_nvidia_output= [TextStyle(" ", 3) for _ in range(7)] #will cause a crash on systems with multiple gpus. Need to fix at some point
 
-    def format(self, nvidia_readings: object, schedule: dict) -> list:
+    def format(self, nvidia_readings: list, schedule: dict) -> list:
         if schedule["nvidia"] is False:
             return
         
-        gpu_readings= nvidia_readings.gpus_readings
+        gpu_readings= nvidia_readings
         formatted_nvidia_output= self.formatted_nvidia_output
         
         for gpu_index in gpu_readings:
@@ -640,10 +530,10 @@ class ProcessFormatter:
             row[1].value = f"{process.ppid:<10}"
             row[1].style = 5
 
-            row[2].value = f"{proc_user:<16.16}"
+            row[2].value = f"{proc_user:<14.14}"
             row[2].style = 0 if proc_user in current_users else (5 if proc_user == "root" else 3)
 
-            row[3].value = f"{process.priority:<9}"
+            row[3].value = f"{process.priority:<5}"
             row[3].style = 3
 
             row[4].value = f"{process.state:<7}"
