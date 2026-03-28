@@ -36,15 +36,6 @@ class CPUDashboard:
         self.start_y = 3
         self.start_x = 0
 
-        # Check initial window size
-        lines, cols = stdscr.getmaxyx()
-        if lines >= 13 + self.start_y and cols >= 51 + self.start_x:
-            self.__dashboard_disabled = False
-            self.last_line_y = 13
-        else:
-            self.__dashboard_disabled = True
-            self.last_line_y = 3
-
         self.__cpu_name = self.cpu_temp_readings.cpu_name
         self.__sensor_name = self.cpu_temp_readings.sensor_name
 
@@ -84,6 +75,16 @@ class CPUDashboard:
         self.__diff_engine_pressure.check_differences(pressure_formatter.formatted_output)
 
     def draw_static_interface(self):
+        # Check initial window size
+        lines, cols = self.cpu_dashboard.getmaxyx()
+
+        if lines >= 13 + self.start_y and cols >= 51 + self.start_x:
+            self.__dashboard_disabled = False
+            self.last_line_y = 13
+        else:
+            self.__dashboard_disabled = True
+            self.last_line_y = 3
+
         if self.__dashboard_disabled:
             return
 
@@ -211,7 +212,7 @@ class CPULoadDashboard:
         "last_line_y",
     )
 
-    def __init__(self, stdscr: curses.window, cpu_dashboard_last_y: int, file_path: object):
+    def __init__(self, stdscr: curses.window, file_path: object):
         self.cpu_load_dashboard = stdscr
         self.cpu_info_load = CPUInfoLoad(file_path)
         self.formatter = CPULoadFormatter()
@@ -219,19 +220,12 @@ class CPULoadDashboard:
 
         self.nr_of_threads = len(self.cpu_info_load.cpu_load_raw_data)
 
-        self.start_y = 3 + cpu_dashboard_last_y
+        self.start_y = 2
         self.start_x = 0
 
         window_max_lines, window_max_columns = stdscr.getmaxyx()
         self.window_max_columns = window_max_columns - 1 - self.start_x
-        max_lines = self.window_max_lines = min(24, window_max_lines - self.start_y)
-
-        if window_max_lines < self.start_y + 4:
-            self.__dashboard_disabled = True
-            self.last_line_y = 0
-        else:
-            self.__dashboard_disabled = False
-            self.last_line_y = max_lines - 2
+        self.window_max_lines = min(24, window_max_lines - self.start_y)
 
         self.max_bar_width = 1
         self.__cpu_load_positions = []
@@ -243,18 +237,16 @@ class CPULoadDashboard:
 
     def resize(self, stdscr: curses.window, cpu_dashboard_last_y: int):
         self.cpu_load_dashboard = stdscr
-        self.start_y = 3 + cpu_dashboard_last_y
+        self.start_y = 2 + cpu_dashboard_last_y
 
         window_max_lines, window_max_columns = stdscr.getmaxyx()
         self.window_max_columns = window_max_columns - 1 - self.start_x
         self.window_max_lines = min(24, window_max_lines - self.start_y)
 
-        if window_max_lines < self.start_y + 4:
+        if window_max_lines < self.start_y + 3:
             self.__dashboard_disabled = True
-            self.last_line_y = 0
         else:
             self.__dashboard_disabled = False
-            self.last_line_y = self.window_max_lines - 2
 
         self.draw_static_interface()
 
@@ -267,12 +259,24 @@ class CPULoadDashboard:
         # Update differences for rendering
         self.__diff_engine.check_differences(self.formatter.formatted_cpu_load)
 
-    def draw_static_interface(self):
+    def draw_static_interface(self, cpu_dashboard_last_y: int):
+
+        start_y = self.start_y = 2 + cpu_dashboard_last_y
+        dash = self.cpu_load_dashboard
+
+        window_max_lines, window_max_columns = self.cpu_load_dashboard.getmaxyx()
+        self.window_max_columns = window_max_columns - 1 - self.start_x
+        self.window_max_lines = min(24, window_max_lines - self.start_y)
+
+        if self.window_max_columns < start_y + 4:
+            self.__dashboard_disabled = True
+        else:
+            self.__dashboard_disabled = False
+
         if self.__dashboard_disabled:
+            self.last_line_y = 0
             return
 
-        dash = self.cpu_load_dashboard
-        start_y = self.start_y
         start_x = self.start_x
         threads = self.nr_of_threads
 
@@ -303,12 +307,14 @@ class CPULoadDashboard:
             col = idx % columns
             y = start_y + header_space + row * row_height
             x = start_x + col * col_width
+            last_line_y = start_y + header_space + row * row_height
             if y >= start_y + usable_height:
                 break
             dash.addch(y, x, "[")
             dash.addch(y, x + col_width, "]")
             cpu_load_positions.append((y, x))
 
+        self.last_line_y= last_line_y
         self.__cpu_load_positions = cpu_load_positions
         dash.noutrefresh()
 

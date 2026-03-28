@@ -25,7 +25,7 @@ class ProcessDashboard:
         "sorter",
     )
 
-    def __init__(self, stdscr: curses.window, last_dashboard_max_y: int, file_path: object) -> object:
+    def __init__(self, stdscr: curses.window, file_path: object) -> object:
         self.process_dashboard = stdscr
         self.process_services= ProcessMonitor(file_path)
         self.process_formatter= ProcessFormatter()
@@ -33,18 +33,8 @@ class ProcessDashboard:
         self.sorter= sorter
         self.process_list= {}
         
-        self.start_y= last_dashboard_max_y + 2
-        self.start_x= 0 #other dashboard column width
-
-        #max text width
-        window_max_lines, self.window_max_columns= stdscr.getmaxyx()
-        self.window_max_lines= max(0, window_max_lines - 1 - self.start_y)
-
-        #if there's not enough vertical space, disable it. 
-        if self.window_max_lines > 3:
-            self.__dashboard_disabled= False
-        else:
-            self.__dashboard_disabled= True
+        self.start_y= 2
+        self.start_x= 0 
 
     def update_data_pipeline(self, schedule: dict):
         self.process_services.update(schedule, self.process_list)
@@ -84,7 +74,17 @@ class ProcessDashboard:
 
         return scroll_pos
 
-    def draw_static_interface(self):
+    def draw_static_interface(self, last_dashboard_max_y: int):
+
+        self.start_y= last_dashboard_max_y + 2
+
+        window_max_lines, self.window_max_columns= self.process_dashboard.getmaxyx()
+        self.window_max_lines= max(0, window_max_lines - 1 - self.start_y)
+        
+        if self.window_max_lines > 3:
+            self.__dashboard_disabled= False
+        else:
+            self.__dashboard_disabled= True
 
         if self.__dashboard_disabled:
             return

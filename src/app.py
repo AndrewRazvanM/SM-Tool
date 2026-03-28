@@ -53,8 +53,7 @@ class Application:
         self.cpu_dashboard= cpu.CPUDashboard(stdscr, self.files_path)
 
         #cpu load dashboard
-        self.cpu_load_dashboard= cpu.CPULoadDashboard(stdscr, self.cpu_dashboard.last_line_y, self.files_path)
-        processes_start_y= self.cpu_dashboard.last_line_y + self.cpu_load_dashboard.last_line_y
+        self.cpu_load_dashboard= cpu.CPULoadDashboard(stdscr, self.files_path)
 
         #for network dashboard
         self.network_dashboard= network.NetworkDashboard(stdscr, self.files_path)
@@ -64,7 +63,7 @@ class Application:
 
         #for process window
         self.scroll_pos= 0
-        self.process_dashboard= processes.ProcessDashboard(stdscr, processes_start_y, self.files_path)
+        self.process_dashboard= processes.ProcessDashboard(stdscr, self.files_path)
 
     def handle_input(self, stdscr):
 
@@ -135,12 +134,12 @@ class Application:
         process_dashboard.assign_style()
 
         #generate static interfaces
-        mem_dashboard.draw_static_interface()
         cpu_dashboard.draw_static_interface()
-        cpu_load_dashboard.draw_static_interface()
+        cpu_load_dashboard.draw_static_interface(cpu_dashboard.last_line_y)
+        mem_dashboard.draw_static_interface()
         network_dashboard.draw_static_interface()
         nvidia_dashboard.draw_static_interface()
-        process_dashboard.draw_static_interface()
+        process_dashboard.draw_static_interface(cpu_load_dashboard.last_line_y)
 
         while self.running:
 
