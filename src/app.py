@@ -91,7 +91,6 @@ class Application:
             if key == curses.KEY_RESIZE:
                 stdscr= self.stdscr
                 stdscr.clear()
-                self.layout_controller.calculate_layout(self.dashboard_dict)
                 self.layout_controller.on_resize(stdscr, self.dashboard_dict)
             
             if key == ord("q"):

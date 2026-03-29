@@ -69,6 +69,7 @@ class CPUDashboard:
         # Check initial window size
         start_y = self.start_y = dash_coordinates.start_y
         start_x = self.start_x = dash_coordinates.start_x
+        max_width = dash_coordinates.max_x
 
         if dash_coordinates.sys_disabled is True:
             self.last_line_y = 0
@@ -272,7 +273,7 @@ class CPULoadDashboard:
             x = start_x + col * col_width
             last_line_y = y
 
-            if y >= start_y + usable_height:
+            if y >= start_y + usable_height or y >= window_max_lines:
                 break
 
             cpu_load_positions.append((y, x))
@@ -319,9 +320,7 @@ class CPULoadDashboard:
             if idx >= len(positions):
                 break
             width = content.bar_width
-            dash.addnstr(positions[idx][0], positions[idx][1] + 1,
-                         content.value[:width], max_width, bar_map[content.style])
-            dash.addnstr(positions[idx][0], positions[idx][1] + width + 1,
-                         content.value[width:], max(1, max_width - width))
+            dash.addnstr(positions[idx][0], positions[idx][1] + 1, content.value[:width], max_width, bar_map[content.style])
+            dash.addnstr(positions[idx][0], positions[idx][1] + width + 1, content.value[width:], max(1, max_width - width))
 
         dash.noutrefresh()

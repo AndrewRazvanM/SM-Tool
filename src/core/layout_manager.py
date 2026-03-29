@@ -74,7 +74,7 @@ class LayoutController:
 
         #for the static dashboards
         top_dashboards_max_y = 13 #all top dashboard have the same number of lines
-        top_dash_min_width= 51
+        top_dash_width= 51
 
         dash_not_disabled = False
         dash_disabled= True
@@ -86,102 +86,139 @@ class LayoutController:
             for key in layout:
                 layout[key].update(0, 0, 0, 0, dash_disabled)
 
+            cpu_load_dash.calculate_layout(layout["cpu_load"])
+
             return
         #small window; only 2 dashboards are available
-        if window_max_lines < top_dashboards_max_y:
+        if window_max_lines < top_dashboards_max_y + 2: #need a minimum of 15 lines to write the top dashboards without error
 
             layout["cpu"].update(0, 0, 0, 0, dash_disabled)
             layout["mem"].update(0, 0, 0, 0, dash_disabled)
             layout["net"].update(0, 0, 0, 0, dash_disabled)
             layout["nvidia"].update(0, 0, 0, 0, dash_disabled)
 
-            layout["cpu_load"].update(
-                dashboard_min_y,
-                0,
-                window_max_lines,
-                window_max_columns,
-                dash_not_disabled
-            )
+            if window_max_lines < dashboard_min_y:
+                layout["cpu_load"].update(
+                    dashboard_min_y,
+                    0,
+                    window_max_lines,
+                    window_max_columns,
+                    dash_not_disabled
+                )
 
-            cpu_load_dash.calculate_layout(layout["cpu_load"])
-            cpu_load_last = cpu_load_dash.last_line_y
+                cpu_load_dash.calculate_layout(layout["cpu_load"])
+                cpu_load_last = cpu_load_dash.last_line_y
+            else:
+                layout["cpu_load"].update(0, 0, 0, 0, dash_disabled)
+                cpu_load_dash.calculate_layout(layout["cpu_load"])
+                cpu_load_last = dashboard_min_y
 
-            remaining_height = max(0, window_max_lines - (cpu_load_last + yspace_between_dashboards))
-            layout["process"].update(
-                cpu_load_last + yspace_between_dashboards,
-                0,
-                remaining_height,
-                window_max_columns,
-                dash_not_disabled
-            )
+            process_start_y= cpu_load_last + yspace_between_dashboards
+            remaining_height = window_max_lines - process_start_y - 1 #need space for the header and 1 process to show
+            if remaining_height > 1:
+                layout["process"].update(
+                    process_start_y,
+                    0,
+                    remaining_height,
+                    window_max_columns,
+                    dash_not_disabled
+                )
+            else:
+                layout["process"].update(0, 0, 0, 0, dash_disabled)
 
             return
 
+        if window_max_columns > top_dash_width:
         #static top dashboards        
-        layout["cpu"].update(
-        dashboard_min_y,
-        0,
-        window_max_lines,
-        top_dash_min_width,
-        False
-        )
+            layout["cpu"].update(
+            dashboard_min_y,
+            0,
+            window_max_lines,
+            top_dash_width,
+            dash_not_disabled
+            )
 
-        mem_x_pos= top_dash_min_width
-        if window_max_columns > mem_x_pos + top_dash_min_width:
+            cpu_dash_pos= top_dashboards_max_y
+        else:
+            layout["cpu"].update(0, 0, 0, 0, dash_disabled)
+            cpu_dash_pos= dashboard_min_y
+
+        mem_x_pos= top_dash_width
+        if window_max_columns > mem_x_pos + top_dash_width:
             layout["mem"].update(
             dashboard_min_y,
-            top_dash_min_width,
+            top_dash_width,
             window_max_lines,
-            top_dash_min_width,
+            top_dash_width,
             dash_not_disabled
             )
         else:
             layout["mem"].update(0, 0, 0, 0, dash_disabled)
 
-        net_x_pos= (top_dash_min_width * 2)
-        if window_max_columns > net_x_pos + top_dash_min_width:
+        net_x_pos= (top_dash_width * 2)
+        if window_max_columns > net_x_pos + top_dash_width:
             layout["net"].update(
             dashboard_min_y,
             net_x_pos,
             window_max_lines,
-            top_dash_min_width,
+            top_dash_width,
             dash_not_disabled
             )
         else:
             layout["net"].update(0, 0, 0, 0, dash_disabled)
         
-        nvidia_x_pos= (top_dash_min_width * 3)
-        if window_max_columns > nvidia_x_pos + top_dash_min_width:
+        nvidia_x_pos= (top_dash_width * 3)
+        if window_max_columns > nvidia_x_pos + top_dash_width:
             layout["nvidia"].update(
             dashboard_min_y,
             nvidia_x_pos,
             window_max_lines,
-            top_dash_min_width,
+            top_dash_width,
             dash_not_disabled
             )
         else:
             layout["nvidia"].update(0, 0, 0, 0, dash_disabled)
 
         #dynamic dashboards
-        layout["cpu_load"].update(
-            top_dashboards_max_y + yspace_between_dashboards,
-            0,
-            window_max_lines,
-            window_max_columns,
-            dash_not_disabled
-        )
-
-        cpu_load_dash.calculate_layout(layout["cpu_load"])
-        cpu_load_last = cpu_load_dash.last_line_y
+        #cpu load 
+        remaining_height = window_max_lines - (top_dashboards_max_y + yspace_between_dashboards)
+        cpu_load_dash_min_y = 3 #need space for header + total load + 1 extra row
         
-        remaining_height = max(0, window_max_lines - (cpu_load_last + yspace_between_dashboards + 1))
-        layout["process"].update(
-            cpu_load_last + yspace_between_dashboards,
-            0,
-            remaining_height,
-            window_max_columns,
-            dash_not_disabled
-        )
+        if remaining_height > cpu_load_dash_min_y: 
+            layout["cpu_load"].update(
+                cpu_dash_pos + yspace_between_dashboards,
+                0,
+                window_max_lines,
+                window_max_columns,
+                dash_not_disabled
+            )
+            cpu_load_dash.calculate_layout(layout["cpu_load"])
+            cpu_load_last = cpu_load_dash.last_line_y
+        
+        else:
+            layout["cpu_load"].update(
+                top_dashboards_max_y + yspace_between_dashboards,
+                0,
+                window_max_lines,
+                window_max_columns,
+                dash_disabled
+            )
+            cpu_load_dash.calculate_layout(layout["cpu_load"])
+            cpu_load_last = top_dashboards_max_y
+
+        #processes
+        process_start_y= cpu_load_last + yspace_between_dashboards
+        remaining_height = window_max_lines - process_start_y - 1 #need space for the header and 1 process to show
+        if remaining_height > 1:
+            layout["process"].update(
+                process_start_y,
+                0,
+                remaining_height,
+                window_max_columns,
+                dash_not_disabled
+            )
+        else:
+            layout["process"].update(0, 0, 0, 0, dash_disabled)
 
     def apply_layout(self, dashboards: dict):
         layout= self.layout

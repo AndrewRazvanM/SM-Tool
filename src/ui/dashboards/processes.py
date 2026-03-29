@@ -33,6 +33,21 @@ class ProcessDashboard:
         self.sorter= sorter
         self.process_list= {}
 
+        self.process_dashboard = stdscr
+        self.process_services= ProcessMonitor(file_path)
+        self.process_formatter= ProcessFormatter()
+        self.__diff_engine= ScrollWinContentDiff()
+        self.sorter= sorter
+        self.process_list= {}
+        self.start_y= 0
+        self.start_x= 0
+        self.window_max_lines= 0
+        self.window_max_columns= 0
+        self.__dashboard_disabled= True
+        self.__sorted_process_content_list= []
+        self.positions_list= []
+        self.header_format= ""
+
     def update_data_pipeline(self, schedule: dict):
         self.process_services.update(schedule, self.process_list)
         self.sorter(self.process_list, schedule)
@@ -65,17 +80,17 @@ class ProcessDashboard:
 
     def draw_static_interface(self, dash_coordinates: object):
 
+        window_max_columns = self.window_max_columns = dash_coordinates.max_x
+        self.window_max_lines = dash_coordinates.max_y
+
         if dash_coordinates.sys_disabled is True:
             self.__dashboard_disabled= True
             return
-        else:
-            self.__dashboard_disabled= False
+
+        self.__dashboard_disabled= False
 
         start_y = self.start_y = dash_coordinates.start_y
         start_x = self.start_x = dash_coordinates.start_x
-
-        window_max_columns = self.window_max_columns = dash_coordinates.max_x
-        self.window_max_lines = dash_coordinates.max_y
 
         process_dashboard = self.process_dashboard
 
