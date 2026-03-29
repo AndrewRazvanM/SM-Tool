@@ -231,18 +231,16 @@ class CPULoadDashboard:
         # Update differences for rendering
         self.__diff_engine.check_differences(self.formatter.formatted_cpu_load)
 
-    def draw_static_interface(self, dash_coordinates: object):
-
+    def calculate_layout(self, dash_coordinates: object):
         if dash_coordinates.sys_disabled is True:
-            self.last_line_y= 0
-            self.__dashboard_disabled= True
+            self.last_line_y = 0
+            self.__dashboard_disabled = True
             return
         else:
-            self.__dashboard_disabled= False
+            self.__dashboard_disabled = False
 
         start_y = self.start_y = dash_coordinates.start_y
         start_x = self.start_x = dash_coordinates.start_x
-        dash = self.cpu_load_dashboard
 
         window_max_lines = min(24, dash_coordinates.max_y - start_y)
         window_max_columns = dash_coordinates.max_x - 1 - start_x
@@ -255,8 +253,6 @@ class CPULoadDashboard:
         usable_width = window_max_columns
         usable_height = window_max_lines - header_space
 
-        dash.addstr(start_y + 1, start_x + 15, "CPU Load Dashboard", curses.A_BOLD)
-
         max_rows = max(1, usable_height // row_height)
         rows = min(threads, max_rows)
         columns = -(-threads // rows)  # ceil division
@@ -265,26 +261,48 @@ class CPULoadDashboard:
 
         cpu_load_positions = []
 
-        # Draw total CPU bar
-        dash.addch(start_y + 2, start_x, "[")
-        dash.addch(start_y + 2, start_x + col_width, "]")
+        # total CPU bar
         cpu_load_positions.append((start_y + 2, start_x))
 
-        # Draw per-core bars
+        # per-core bars
         for idx in range(threads - 1):
             row = idx // columns
             col = idx % columns
             y = start_y + header_space + row * row_height
             x = start_x + col * col_width
-            last_line_y = start_y + header_space + row * row_height
+            last_line_y = y
+
             if y >= start_y + usable_height:
                 break
-            dash.addch(y, x, "[")
-            dash.addch(y, x + col_width, "]")
+
             cpu_load_positions.append((y, x))
 
-        self.last_line_y= last_line_y
+        self.last_line_y = last_line_y
         self.__cpu_load_positions = cpu_load_positions
+
+    def draw_static_interface(self):
+
+        if self.__dashboard_disabled:
+            return
+
+        dash = self.cpu_load_dashboard
+        start_y = self.start_y
+        start_x = self.start_x
+
+        dash.addstr(start_y + 1, start_x + 15, "CPU Load Dashboard", curses.A_BOLD)
+
+        positions = self.__cpu_load_positions
+        col_width = self.max_bar_width + 2  # recreate bracket span
+
+        # Draw total CPU bar
+        dash.addch(positions[0][0], positions[0][1], "[")
+        dash.addch(positions[0][0], positions[0][1] + col_width, "]")
+
+        # Draw per-core bars
+        for y, x in positions[1:]:
+            dash.addch(y, x, "[")
+            dash.addch(y, x + col_width, "]")
+
         dash.noutrefresh()
 
     def render(self):
