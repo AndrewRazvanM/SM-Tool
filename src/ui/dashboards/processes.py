@@ -69,13 +69,13 @@ class ProcessDashboard:
             self.__dashboard_disabled= True
             return
         else:
-            self.__dashboard_disabled= True
+            self.__dashboard_disabled= False
 
         start_y = self.start_y = dash_coordinates.start_y
         start_x = self.start_x = dash_coordinates.start_x
 
         window_max_columns = self.window_max_columns = dash_coordinates.max_x
-        self.window_max_lines = max(0, dash_coordinates.max_y - 1 - start_y)
+        self.window_max_lines = dash_coordinates.max_y
 
         process_dashboard = self.process_dashboard
 

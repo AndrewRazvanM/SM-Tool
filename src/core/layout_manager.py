@@ -34,6 +34,7 @@ class LayoutController:
 
     def __init__ (self, stdscr):
         self.window_max_lines, self.window_max_columns = stdscr.getmaxyx()
+
         self.usr_dash_disabled= {
             "cpu": False,
             "cpu_load": False,
@@ -70,7 +71,6 @@ class LayoutController:
         dashboard_min_y = 3 #leaves space for the header
         dashboard_min_x = 16
         yspace_between_dashboards = 2
-        xspace_between_dashboards = 1
 
         #for the static dashboards
         top_dashboards_max_y = 13 #all top dashboard have the same number of lines
@@ -79,7 +79,7 @@ class LayoutController:
         dash_not_disabled = False
         dash_disabled= True
 
-
+        #window too small
         if window_max_lines < dashboard_min_y or window_max_columns < dashboard_min_x:
             self.too_small = True
 
@@ -87,7 +87,7 @@ class LayoutController:
                 layout[key].update(0, 0, 0, 0, dash_disabled)
 
             return
-
+        #small window; only 2 dashboards are available
         if window_max_lines < top_dashboards_max_y:
 
             layout["cpu"].update(0, 0, 0, 0, dash_disabled)
@@ -106,10 +106,11 @@ class LayoutController:
             cpu_load_dash.calculate_layout(layout["cpu_load"])
             cpu_load_last = cpu_load_dash.last_line_y
 
+            remaining_height = max(0, window_max_lines - (cpu_load_last + yspace_between_dashboards))
             layout["process"].update(
                 cpu_load_last + yspace_between_dashboards,
                 0,
-                window_max_lines,
+                remaining_height,
                 window_max_columns,
                 dash_not_disabled
             )
@@ -172,11 +173,12 @@ class LayoutController:
 
         cpu_load_dash.calculate_layout(layout["cpu_load"])
         cpu_load_last = cpu_load_dash.last_line_y
-
+        
+        remaining_height = max(0, window_max_lines - (cpu_load_last + yspace_between_dashboards + 1))
         layout["process"].update(
             cpu_load_last + yspace_between_dashboards,
             0,
-            window_max_lines,
+            remaining_height,
             window_max_columns,
             dash_not_disabled
         )
