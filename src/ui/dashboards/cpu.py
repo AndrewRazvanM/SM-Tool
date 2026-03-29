@@ -33,24 +33,15 @@ class CPUDashboard:
         self.__diff_engine_temp = ContentDiff()
         self.__diff_engine_pressure = ContentDiff()
 
-        self.start_y = 3
-        self.start_x = 0
-
         self.__cpu_name = self.cpu_temp_readings.cpu_name
         self.__sensor_name = self.cpu_temp_readings.sensor_name
 
-    def resize(self, stdscr: curses.window):
+    def resize(self, stdscr: curses.window, dash_coordinates: object):
         self.cpu_dashboard = stdscr
-        lines, cols = stdscr.getmaxyx()
-        if lines >= 13 + self.start_y and cols >= 51 + self.start_x:
-            self.__dashboard_disabled = False
-            self.draw_static_interface()
-            self.__diff_engine_temp.force_write = True
-            self.__diff_engine_pressure.force_write = True
-            self.last_line_y = 13
-        else:
-            self.__dashboard_disabled = True
-            self.last_line_y = 0
+        self.__diff_engine_temp.force_write = True
+        self.__diff_engine_pressure.force_write = True
+
+        self.draw_static_interface(dash_coordinates)
 
     def assign_style(self):
         from core.style_maps import text_map, bar_map
@@ -74,22 +65,20 @@ class CPUDashboard:
         pressure_formatter.format(cpu_pressure, schedule)
         self.__diff_engine_pressure.check_differences(pressure_formatter.formatted_output)
 
-    def draw_static_interface(self):
+    def draw_static_interface(self, dash_coordinates: object):
         # Check initial window size
-        lines, cols = self.cpu_dashboard.getmaxyx()
+        start_y = self.start_y = dash_coordinates.start_y
+        start_x = self.start_x = dash_coordinates.start_x
 
-        if lines >= 13 + self.start_y and cols >= 51 + self.start_x:
-            self.__dashboard_disabled = False
-            self.last_line_y = 13
-        else:
-            self.__dashboard_disabled = True
-            self.last_line_y = 3
-
-        if self.__dashboard_disabled:
+        if dash_coordinates.sys_disabled is True:
+            self.last_line_y = 0
+            self.__dashboard_disabled= True
             return
+        else:
+            self.last_line_y = 13
+            self.__dashboard_disabled= False
 
         dash = self.cpu_dashboard
-        start_y, start_x = self.start_y, self.start_x
         cpu_name, sensor_name = self.__cpu_name, self.__sensor_name
 
         # Draw borders
@@ -220,13 +209,6 @@ class CPULoadDashboard:
 
         self.nr_of_threads = len(self.cpu_info_load.cpu_load_raw_data)
 
-        self.start_y = 2
-        self.start_x = 0
-
-        window_max_lines, window_max_columns = stdscr.getmaxyx()
-        self.window_max_columns = window_max_columns - 1 - self.start_x
-        self.window_max_lines = min(24, window_max_lines - self.start_y)
-
         self.max_bar_width = 1
         self.__cpu_load_positions = []
 
@@ -235,20 +217,10 @@ class CPULoadDashboard:
         self.style_map = text_map
         self.bar_style_map = bar_map
 
-    def resize(self, stdscr: curses.window, cpu_dashboard_last_y: int):
+    def resize(self, stdscr: curses.window, dash_coordinates: object):
         self.cpu_load_dashboard = stdscr
-        self.start_y = 2 + cpu_dashboard_last_y
 
-        window_max_lines, window_max_columns = stdscr.getmaxyx()
-        self.window_max_columns = window_max_columns - 1 - self.start_x
-        self.window_max_lines = min(24, window_max_lines - self.start_y)
-
-        if window_max_lines < self.start_y + 3:
-            self.__dashboard_disabled = True
-        else:
-            self.__dashboard_disabled = False
-
-        self.draw_static_interface()
+        self.draw_static_interface(dash_coordinates)
 
     def update_data_pipeline(self, schedule: dict):
         disable_cpu_check= False
@@ -259,32 +231,29 @@ class CPULoadDashboard:
         # Update differences for rendering
         self.__diff_engine.check_differences(self.formatter.formatted_cpu_load)
 
-    def draw_static_interface(self, cpu_dashboard_last_y: int):
+    def draw_static_interface(self, dash_coordinates: object):
 
-        start_y = self.start_y = 2 + cpu_dashboard_last_y
+        if dash_coordinates.sys_disabled is True:
+            self.last_line_y= 0
+            self.__dashboard_disabled= True
+            return
+        else:
+            self.__dashboard_disabled= False
+
+        start_y = self.start_y = dash_coordinates.start_y
+        start_x = self.start_x = dash_coordinates.start_x
         dash = self.cpu_load_dashboard
 
-        window_max_lines, window_max_columns = self.cpu_load_dashboard.getmaxyx()
-        self.window_max_columns = window_max_columns - 1 - self.start_x
-        self.window_max_lines = min(24, window_max_lines - self.start_y)
+        window_max_lines = min(24, dash_coordinates.max_y - start_y)
+        window_max_columns = dash_coordinates.max_x - 1 - start_x
 
-        if self.window_max_columns < start_y + 4:
-            self.__dashboard_disabled = True
-        else:
-            self.__dashboard_disabled = False
-
-        if self.__dashboard_disabled:
-            self.last_line_y = 0
-            return
-
-        start_x = self.start_x
         threads = self.nr_of_threads
 
         header_space = 4
         row_height = 2
         min_bar_width = 3
-        usable_width = self.window_max_columns
-        usable_height = self.window_max_lines - header_space
+        usable_width = window_max_columns
+        usable_height = window_max_lines - header_space
 
         dash.addstr(start_y + 1, start_x + 15, "CPU Load Dashboard", curses.A_BOLD)
 

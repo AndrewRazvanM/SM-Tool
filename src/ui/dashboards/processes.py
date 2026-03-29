@@ -32,9 +32,6 @@ class ProcessDashboard:
         self.__diff_engine= ScrollWinContentDiff()
         self.sorter= sorter
         self.process_list= {}
-        
-        self.start_y= 2
-        self.start_x= 0 
 
     def update_data_pipeline(self, schedule: dict):
         self.process_services.update(schedule, self.process_list)
@@ -47,19 +44,11 @@ class ProcessDashboard:
         self.style_map= text_map
         self.bar_map= bar_map
 
-    def resize(self, stdscr: curses.window, last_dashboard_max_y: int):
+    def resize(self, stdscr: curses.window, dash_coordinates: object):
         self.process_dashboard= stdscr
-        self.start_y= last_dashboard_max_y + 2
 
-        window_max_lines, self.window_max_columns= stdscr.getmaxyx()
-        self.window_max_lines= max(0, window_max_lines - 1 - self.start_y)
-        
-        if self.window_max_lines > 3:
-            self.__dashboard_disabled= False
-        else:
-            self.__dashboard_disabled= True
-
-        self.draw_static_interface()
+        self.draw_static_interface(dash_coordinates)
+        self.__diff_engine.force_write= True
 
     def visible_content(self, scroll_pos: int) -> list:
         process_list= self.process_formatter.formatted_processes_output
@@ -74,23 +63,21 @@ class ProcessDashboard:
 
         return scroll_pos
 
-    def draw_static_interface(self, last_dashboard_max_y: int):
+    def draw_static_interface(self, dash_coordinates: object):
 
-        self.start_y= last_dashboard_max_y + 2
-
-        window_max_lines, self.window_max_columns= self.process_dashboard.getmaxyx()
-        self.window_max_lines= max(0, window_max_lines - 1 - self.start_y)
-        
-        if self.window_max_lines > 3:
-            self.__dashboard_disabled= False
+        if dash_coordinates.sys_disabled is True:
+            self.__dashboard_disabled= True
+            return
         else:
             self.__dashboard_disabled= True
 
-        if self.__dashboard_disabled:
-            return
+        start_y = self.start_y = dash_coordinates.start_y
+        start_x = self.start_x = dash_coordinates.start_x
+
+        window_max_columns = self.window_max_columns = dash_coordinates.max_x
+        self.window_max_lines = max(0, dash_coordinates.max_y - 1 - start_y)
 
         process_dashboard = self.process_dashboard
-        start_y = self.start_y
 
         # Column widths 
         __widths = [
@@ -134,13 +121,14 @@ class ProcessDashboard:
 
             header_parts.append(f"{{:<{w}}}")
 
-        header_parts.append(f"{{:<{self.window_max_columns - position_idx}}}")  # last column expands
+        remaining_window_columns = max(0, window_max_columns - position_idx)
+        header_parts.append(f"{{:<{remaining_window_columns}}}")  # last column expands
 
         self.positions_list= positions_list
         self.header_format= header_format = "".join(header_parts)
         header_line = header_format.format(*headers)
 
-        process_dashboard.addnstr(start_y, 0, header_line, self.window_max_columns, self.bar_map[4])
+        process_dashboard.addnstr(start_y, start_x, header_line, window_max_columns, self.bar_map[4])
         process_dashboard.noutrefresh()
 
     def render(self):
@@ -150,7 +138,8 @@ class ProcessDashboard:
         
         highlight_columns= (3, 4, 5, 7, 8, 9)
         
-        start_y= self.start_y + 1 #leave space for header
+        start_y = self.start_y + 1 #leave space for header
+        start_x = self.start_x
 
         positions_list= self.positions_list
 
@@ -167,7 +156,7 @@ class ProcessDashboard:
             if process_obj.row_changed:
 
                 attr= style_map[process_row[0].style]
-                process_dashboard.addnstr(start_y + row_idx, 0, process_row[0].value, window_max_columns, attr)
+                process_dashboard.addnstr(start_y + row_idx, start_x, process_row[0].value, window_max_columns, attr)
                 
                 for col in range(0, 11):
                     col_position= positions_list[col]
@@ -177,7 +166,8 @@ class ProcessDashboard:
                         break
 
                     attr= style_map[process_row[col + 1].style]
-                    process_dashboard.addnstr(start_y + row_idx, col_position, process_row[col + 1].value, max_col_width, attr)
+                    process_dashboard.addnstr(start_y + row_idx, start_x + col_position, process_row[col + 1].value, max_col_width, attr)
+
             #updates only cpu, time, priority, state, virt mem, mem
             elif process_obj.row_update_values:
                 for idx in highlight_columns:
@@ -188,5 +178,5 @@ class ProcessDashboard:
                     if max_width >= 1:
                     
                         attr= style_map[style]
-                        process_dashboard.addnstr(start_y + row_idx, col_position, text, max_width, attr)
+                        process_dashboard.addnstr(start_y + row_idx, start_x + col_position, text, max_width, attr)
                 

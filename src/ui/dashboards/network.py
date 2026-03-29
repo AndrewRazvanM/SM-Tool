@@ -21,54 +21,42 @@ class NetworkDashboard:
             self.network_services= NetworkTraffic(file_path)
             self.formatter= NetworkFormatter()
 
-            self.start_y= 3
-            self.start_x= 50 + 48 + 1 #the other dashboard positions
- 
-            window_max_lines, window_max_columns= stdscr.getmaxyx()
-
-            if window_max_lines > 13 + self.start_y and window_max_columns > 51 + self.start_x:
-                self.__dashboard_disabled= False
-            else:
-                self.__dashboard_disabled= True
-
             self.__diff_engine= ContentDiff()
 
-        def resize(self, stdscr: curses.window):
+        def resize(self, stdscr: curses.window, dash_coordinates: object):
             self.network_dashboard= stdscr
-            window_max_lines, window_max_columns= stdscr.getmaxyx()
 
-            if window_max_lines >= 13 + self.start_y and window_max_columns >= 51 + self.start_x:
-                self.__dashboard_disabled= False
-                self.draw_static_interface()
-                self.__diff_engine.force_write= True
+            self.draw_static_interface(dash_coordinates)
+            self.__diff_engine.force_write= True
 
-            else:
-                self.__dashboard_disabled= True
 
         def assign_style(self):
             from core.style_maps import text_map, bar_map
 
-            self.style_map= text_map
-            self.bar_style_map= bar_map
+            self.style_map = text_map
+            self.bar_style_map = bar_map
 
         def update_data_pipeline(self, schedule: dict) -> list:
-            network_services= self.network_services
-            formatter= self.formatter
+            network_services = self.network_services
+            formatter = self.formatter
 
             network_services.update(schedule)
             formatter.format(network_services.throughput, schedule)
 
             self.__diff_engine.check_differences(formatter.formatted_network_output)
 
-        def draw_static_interface(self):
-            if self.__dashboard_disabled:
+        def draw_static_interface(self, dash_coordinates: object):
+            if dash_coordinates.sys_disabled is True:
+                self.__dashboard_disabled = True
                 return
+            else:
+                self.__dashboard_disabled = False
             
             network_dashboard= self.network_dashboard
 
             #starting position
-            start_y= self.start_y 
-            start_x= self.start_x
+            start_y= dash_coordinates.start_y 
+            start_x= dash_coordinates.start_x
 
             #build the borders
             # Draw corners first

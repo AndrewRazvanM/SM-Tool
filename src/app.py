@@ -84,12 +84,11 @@ class Application:
                 self.cpu_dashboard.resize(stdscr)
     
                 self.cpu_load_dashboard.resize(stdscr, self.cpu_dashboard.last_line_y)
-                processes_start_y= self.cpu_dashboard.last_line_y + self.cpu_load_dashboard.last_line_y
 
                 self.network_dashboard.resize(stdscr)
                 self.nvidia_dashboard.resize(stdscr)
 
-                self.process_dashboard.resize(stdscr, processes_start_y)
+                self.process_dashboard.resize(stdscr, self.cpu_load_dashboard.last_line_y)
             
             if key == ord("q"):
                 self.running= False

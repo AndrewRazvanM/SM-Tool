@@ -7,8 +7,6 @@ class NvidiaDashboard:
 
     __slots__= (
         "nvidia_dashboard",
-        "window_max_columns",
-        "window_max_lines",
         "start_y",
         "start_x",
         "style_map",
@@ -22,20 +20,8 @@ class NvidiaDashboard:
     def __init__(self, stdscr: curses.window) -> object:
         self.nvidia_dashboard = stdscr
         
-        self.start_y= 3
-        self.start_x= 50 + 48 + 50 + 2 #other dashboard column width
         self.nvidia_service= Nvidia()
         self.formatter= NvidiaFormatter()
-
-        #max text width
-        window_max_lines, window_max_columns= stdscr.getmaxyx()
-
-        self.window_max_columns= window_max_columns - 1  - self.start_x#leaves space for edge
-        #if there's noe enough vertical space, disable it. +3 leaves space for the tytle
-        if window_max_lines >= 13 + self.start_y and window_max_columns > 50 + self.start_x:
-            self.__dashboard_disabled= False
-        else:
-            self.__dashboard_disabled= True
 
         self.__diff_engine= ContentDiff()
 
@@ -45,18 +31,10 @@ class NvidiaDashboard:
         self.style_map= text_map
         self.bar_style_map= bar_map
 
-    def resize(self, stdscr: curses.window):
-        self.nvidia_dashboard= stdscr
-        window_max_lines, window_max_columns= stdscr.getmaxyx()
+    def resize(self, stdscr: curses.window, dash_coordinates: object):
+        self.nvidia_dashboard= stdscr    
 
-        if window_max_lines >= 13 + self.start_y and window_max_columns > 50 + self.start_x:
-            self.__dashboard_disabled= False
-            self.__diff_engine.force_write= True
-        else:
-            self.__dashboard_disabled= True
-            
-
-        self.draw_static_interface()
+        self.draw_static_interface(dash_coordinates)
 
     def update_data_pipeline(self, schedule: dict) -> list:
         nvidia_service= self.nvidia_service
@@ -66,17 +44,20 @@ class NvidiaDashboard:
         formated_data.format(nvidia_service.gpus_readings, schedule)
         self.__diff_engine.check_differences(formated_data.formatted_nvidia_output)
 
-    def draw_static_interface(self):
+    def draw_static_interface(self, dash_coordinates: object):
 
-        if self.__dashboard_disabled:
+        if dash_coordinates.sys_disabled is True:
+            self.__dashboard_disabled= True
             return
+        else:
+            self.__dashboard_disabled= False
         
         nvidia_dashboard= self.nvidia_dashboard
         gpu_name_list= self.nvidia_service.gpu_name_list
 
         #starting position
-        start_y= self.start_y 
-        start_x= self.start_x
+        start_y= dash_coordinates.start_y 
+        start_x= dash_coordinates.start_x
 
         #build the borders
         # Draw corners first
