@@ -55,35 +55,36 @@ class MemoryDashboard:
         memory_dashboard= self.memory_dashboard
 
         #starting position
-        start_y= dash_coordinates.start_y 
-        start_x= dash_coordinates.start_x
+        start_y= self.start_y = dash_coordinates.start_y 
+        start_x= self.start_x = dash_coordinates.start_x
+        max_x= dash_coordinates.max_x
 
         #build the borders
         # Draw corners first
         memory_dashboard.addch(start_y, start_x, curses.ACS_ULCORNER)
-        memory_dashboard.addch(start_y, start_x+ 47, curses.ACS_URCORNER)
+        memory_dashboard.addch(start_y, start_x + max_x - 1, curses.ACS_URCORNER)
         memory_dashboard.addch(start_y+ 11, start_x, curses.ACS_LLCORNER)
-        memory_dashboard.addch(start_y+ 11, start_x+ 47, curses.ACS_LRCORNER)
+        memory_dashboard.addch(start_y+ 11, start_x + max_x - 1, curses.ACS_LRCORNER)
 
         # Draw horizontal edges (width-1)
-        memory_dashboard.hline(start_y, start_x+1, curses.ACS_HLINE, 46)
-        memory_dashboard.hline(start_y+ 11, start_x+1, curses.ACS_HLINE, 46)
+        memory_dashboard.hline(start_y, start_x+1, curses.ACS_HLINE, max_x - 2)
+        memory_dashboard.hline(start_y+ 11, start_x+1, curses.ACS_HLINE, max_x - 2)
 
         # Draw vertical edges (height-1)
         memory_dashboard.vline(start_y + 1, start_x, curses.ACS_VLINE, 10)
-        memory_dashboard.vline(start_y + 1, start_x+ 47, curses.ACS_VLINE, 10)
+        memory_dashboard.vline(start_y + 1, start_x + max_x - 1, curses.ACS_VLINE, 10)
         #add title
         memory_dashboard.addstr(start_y+ 0, start_x+ 15, "Memory Dashboard", curses.A_BOLD)
 
         memory_dashboard.addstr(start_y+ 1, start_x+ 2, "Some  |  Avg 10:")
         memory_dashboard.addstr(start_y+ 2, start_x+ 8, "|  Avg 60:")
         memory_dashboard.addstr(start_y+ 3, start_x+ 8, "| Avg 300:")
-        memory_dashboard.hline(start_y+ 4, start_x+ 1, "-", 46)
+        memory_dashboard.hline(start_y+ 4, start_x+ 1, "-", max_x - 2)
         
         memory_dashboard.addstr(start_y+ 5, start_x+ 2, "Full  |  Avg 10:")
         memory_dashboard.addstr(start_y+ 6, start_x+ 8, "|  Avg 60:")
         memory_dashboard.addstr(start_y+ 7, start_x+ 8, "| Avg 300:")
-        memory_dashboard.hline(start_y+ 8, start_x+ 1, "-", 46)
+        memory_dashboard.hline(start_y+ 8, start_x+ 1, "-", max_x - 2)
 
         memory_dashboard.addstr(start_y+ 9, start_x+ 7, "PSI Health:")
         memory_dashboard.vline(start_y+ 1, start_x+ 26, "|", 10)

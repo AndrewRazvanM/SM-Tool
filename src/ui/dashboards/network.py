@@ -55,25 +55,26 @@ class NetworkDashboard:
             network_dashboard= self.network_dashboard
 
             #starting position
-            start_y= dash_coordinates.start_y 
-            start_x= dash_coordinates.start_x
+            start_y= self.start_y = dash_coordinates.start_y 
+            start_x= self.start_x = dash_coordinates.start_x
+            max_x= dash_coordinates.max_x
 
             #build the borders
             # Draw corners first
             network_dashboard.addch(start_y, start_x, curses.ACS_ULCORNER)
-            network_dashboard.addch(start_y, start_x+ 50, curses.ACS_URCORNER)
+            network_dashboard.addch(start_y, start_x + max_x - 1, curses.ACS_URCORNER)
             network_dashboard.addch(start_y+ 11, start_x, curses.ACS_LLCORNER)
-            network_dashboard.addch(start_y+ 11, start_x+ 50, curses.ACS_LRCORNER)
+            network_dashboard.addch(start_y+ 11, start_x + max_x - 1, curses.ACS_LRCORNER)
 
             # Draw horizontal edges (width-1)
-            network_dashboard.hline(start_y, start_x+1, curses.ACS_HLINE, 49)
-            network_dashboard.hline(start_y+ 11, start_x+1, curses.ACS_HLINE, 49)
+            network_dashboard.hline(start_y, start_x+1, curses.ACS_HLINE, max_x - 2)
+            network_dashboard.hline(start_y+ 11, start_x+1, curses.ACS_HLINE, max_x - 2)
 
             # Draw vertical edges (height-1)
             network_dashboard.vline(start_y+1, start_x, curses.ACS_VLINE, 10)
-            network_dashboard.vline(start_y+1, start_x+ 50, curses.ACS_VLINE, 10)
+            network_dashboard.vline(start_y+1, start_x + max_x - 1, curses.ACS_VLINE, 10)
             #add title
-            network_dashboard.addstr(start_y+ 0, start_x+ 15, "Network Dashboard", curses.A_BOLD)
+            network_dashboard.addstr(start_y+ 0, start_x + 15, "Network Dashboard", curses.A_BOLD)
 
             network_dashboard.addstr(0 + start_y, 15 + start_x, "Network Dashboard", curses.A_BOLD)
             network_dashboard.addstr(1 + start_y, 1 + start_x, "  Upload:")
@@ -81,7 +82,7 @@ class NetworkDashboard:
             network_dashboard.addstr(1 + start_y, 28 + start_x, "Download:")
             network_dashboard.addstr(2 + start_y, 28 + start_x, "Dw dropp:")
             network_dashboard.vline(1 + start_y, 26 + start_x, "|", 2)
-            network_dashboard.hline(3 + start_y, 1 + start_x, "-", 49)
+            network_dashboard.hline(3 + start_y, 1 + start_x, "-", max_x - 2)
             network_dashboard.addstr(3 + start_y, 10 + start_x, "Total")
             network_dashboard.addch(curses.ACS_UARROW)
             network_dashboard.addstr(" - Individual")

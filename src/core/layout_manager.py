@@ -1,5 +1,4 @@
 
-
 class DashCoordinates:
     __slots__ = (
         "start_y",
@@ -52,7 +51,7 @@ class LayoutController:
         
         self.too_small= False
 
-    def initial_layout(self, dashboards: dict):
+    def calculate_layout(self, dashboards: dict):
 
         #local references
         cpu_dash = dashboards["cpu"]
@@ -82,38 +81,118 @@ class LayoutController:
 
 
         if window_max_lines < dashboard_min_y or window_max_columns < dashboard_min_x:
+            self.too_small = True
 
-            self.too_small= True
-            
-            #disable all dash
-            cpu_dash.draw_static_interface(layout["cpu"])
-            cpu_load_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
-            mem_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
-            net_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
-            nvidia_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
-            process_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
+            for key in layout:
+                layout[key].update(0, 0, 0, 0, dash_disabled)
 
             return
 
-        elif window_max_lines < top_dashboards_max_y + dashboard_min_y:
-            #disabled dash
-            cpu_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
-            mem_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
-            net_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
-            nvidia_dash.draw_static_interface(DashCoordinates(0, 0, 0, 0, dash_disabled))
+        if window_max_lines < top_dashboards_max_y:
 
-            #enabled dash
-            cpu_load_dash.draw_static_interface(DashCoordinates(dashboard_min_y, 0, window_max_lines, window_max_columns, dash_not_disabled))
-            process_dash.draw_static_interface(DashCoordinates(cpu_load_dash.last_line_y + yspace_between_dashboards, 0, window_max_lines, window_max_columns, dash_not_disabled))
+            layout["cpu"].update(0, 0, 0, 0, dash_disabled)
+            layout["mem"].update(0, 0, 0, 0, dash_disabled)
+            layout["net"].update(0, 0, 0, 0, dash_disabled)
+            layout["nvidia"].update(0, 0, 0, 0, dash_disabled)
+
+            layout["cpu_load"].update(
+                dashboard_min_y,
+                0,
+                window_max_lines,
+                window_max_columns,
+                dash_not_disabled
+            )
+
+            cpu_load_dash.calculate_layout(layout["cpu_load"])
+            cpu_load_last = cpu_load_dash.last_line_y
+
+            layout["process"].update(
+                cpu_load_last + yspace_between_dashboards,
+                0,
+                window_max_lines,
+                window_max_columns,
+                dash_not_disabled
+            )
+
             return
-        
+
+        #static top dashboards        
+        layout["cpu"].update(
+        dashboard_min_y,
+        0,
+        window_max_lines,
+        top_dash_min_width,
+        False
+        )
+
+        mem_x_pos= top_dash_min_width
+        if window_max_columns > mem_x_pos + top_dash_min_width:
+            layout["mem"].update(
+            dashboard_min_y,
+            top_dash_min_width,
+            window_max_lines,
+            top_dash_min_width,
+            dash_not_disabled
+            )
         else:
-            #enabled dash
-            cpu_dash.draw_static_interface(DashCoordinates(dashboard_min_y, 0, window_max_lines, top_dash_min_width, dash_not_disabled))
-            cpu_load_dash.draw_static_interface(DashCoordinates(cpu_dash.last_line_y + yspace_between_dashboards, 0, window_max_lines, window_max_columns, dash_not_disabled))
-            process_dash.draw_static_interface(DashCoordinates(cpu_load_dash.last_line_y + yspace_between_dashboards, 0, window_max_lines, window_max_columns, dash_not_disabled))
+            layout["mem"].update(0, 0, 0, 0, dash_disabled)
 
-            #enabled if dash fits
-            
+        net_x_pos= (top_dash_min_width * 2)
+        if window_max_columns > net_x_pos + top_dash_min_width:
+            layout["net"].update(
+            dashboard_min_y,
+            net_x_pos,
+            window_max_lines,
+            top_dash_min_width,
+            dash_not_disabled
+            )
+        else:
+            layout["net"].update(0, 0, 0, 0, dash_disabled)
+        
+        nvidia_x_pos= (top_dash_min_width * 3)
+        if window_max_columns > nvidia_x_pos + top_dash_min_width:
+            layout["nvidia"].update(
+            dashboard_min_y,
+            nvidia_x_pos,
+            window_max_lines,
+            top_dash_min_width,
+            dash_not_disabled
+            )
+        else:
+            layout["nvidia"].update(0, 0, 0, 0, dash_disabled)
 
+        #dynamic dashboards
+        layout["cpu_load"].update(
+            top_dashboards_max_y + yspace_between_dashboards,
+            0,
+            window_max_lines,
+            window_max_columns,
+            dash_not_disabled
+        )
 
+        cpu_load_dash.calculate_layout(layout["cpu_load"])
+        cpu_load_last = cpu_load_dash.last_line_y
+
+        layout["process"].update(
+            cpu_load_last + yspace_between_dashboards,
+            0,
+            window_max_lines,
+            window_max_columns,
+            dash_not_disabled
+        )
+
+    def apply_layout(self, dashboards: dict):
+        layout= self.layout
+
+        for key, dash in dashboards.items():
+            coords = layout[key]
+            dash.draw_static_interface(coords)
+
+    def on_resize(self, stdscr, dashboards: dict):
+        self.window_max_lines, self.window_max_columns = stdscr.getmaxyx()
+        layout= self.layout
+        self.calculate_layout(dashboards)
+
+        for key, dash in dashboards.items():
+            coords = layout[key]
+            dash.resize(stdscr, coords)

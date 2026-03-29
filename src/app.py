@@ -1,6 +1,4 @@
-from core import scheduler, file_handling
-from readings import memory as reading_mem, system_pressure, cpu as reading_cpu, processes as reading_proc
-from ui import formatters, contentdiff
+from core import scheduler, file_handling, layout_manager
 from ui.dashboards import memory, cpu, network, nvidia, processes
 import curses
 from time import sleep
@@ -20,6 +18,8 @@ class Application:
         "nvidia_dashboard",
         "process_dashboard",
         "scroll_pos",
+        "layout_controller",
+        "dashboard_dict"
     )
 
     def __init__ (self, stdscr):
@@ -65,6 +65,17 @@ class Application:
         self.scroll_pos= 0
         self.process_dashboard= processes.ProcessDashboard(stdscr, self.files_path)
 
+        #initialize the layout manager
+        self.dashboard_dict= {
+            "cpu": self.cpu_dashboard,
+            "cpu_load": self.cpu_load_dashboard,
+            "mem": self.mem_dashboard,
+            "net": self.network_dashboard,
+            "nvidia": self.nvidia_dashboard,
+            "process": self.process_dashboard,
+        }
+        self.layout_controller = layout_manager.LayoutController(stdscr)
+
     def handle_input(self, stdscr):
 
         while True:
@@ -80,15 +91,8 @@ class Application:
             if key == curses.KEY_RESIZE:
                 stdscr= self.stdscr
                 stdscr.clear()
-                self.mem_dashboard.resize(stdscr)
-                self.cpu_dashboard.resize(stdscr)
-    
-                self.cpu_load_dashboard.resize(stdscr, self.cpu_dashboard.last_line_y)
-
-                self.network_dashboard.resize(stdscr)
-                self.nvidia_dashboard.resize(stdscr)
-
-                self.process_dashboard.resize(stdscr, self.cpu_load_dashboard.last_line_y)
+                self.layout_controller.calculate_layout(self.dashboard_dict)
+                self.layout_controller.on_resize(stdscr, self.dashboard_dict)
             
             if key == ord("q"):
                 self.running= False
@@ -103,6 +107,8 @@ class Application:
         #create local references
         stdscr= self.stdscr
         scheduler= self.scheduler
+        layout_controller= self.layout_controller
+        dashboard_dict= self.dashboard_dict
 
         #mem
         mem_dashboard= self.mem_dashboard
@@ -132,13 +138,8 @@ class Application:
         nvidia_dashboard.assign_style()
         process_dashboard.assign_style()
 
-        #generate static interfaces
-        cpu_dashboard.draw_static_interface()
-        cpu_load_dashboard.draw_static_interface(cpu_dashboard.last_line_y)
-        mem_dashboard.draw_static_interface()
-        network_dashboard.draw_static_interface()
-        nvidia_dashboard.draw_static_interface()
-        process_dashboard.draw_static_interface(cpu_load_dashboard.last_line_y)
+        layout_controller.calculate_layout(dashboard_dict)
+        layout_controller.apply_layout(dashboard_dict)
 
         while self.running:
 

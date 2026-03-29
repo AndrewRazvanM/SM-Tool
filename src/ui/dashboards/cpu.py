@@ -280,7 +280,7 @@ class CPULoadDashboard:
         self.last_line_y = last_line_y
         self.__cpu_load_positions = cpu_load_positions
 
-    def draw_static_interface(self):
+    def draw_static_interface(self, dash_coordinates: object):
 
         if self.__dashboard_disabled:
             return

@@ -56,8 +56,8 @@ class NvidiaDashboard:
         gpu_name_list= self.nvidia_service.gpu_name_list
 
         #starting position
-        start_y= dash_coordinates.start_y 
-        start_x= dash_coordinates.start_x
+        start_y= self.start_y = dash_coordinates.start_y 
+        start_x= self.start_x = dash_coordinates.start_x
 
         #build the borders
         # Draw corners first
