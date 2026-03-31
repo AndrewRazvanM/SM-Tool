@@ -474,9 +474,10 @@ class NvidiaFormatter:
 
             if gpu_readings[gpu_index]["GPU Load"] == "N/A":
                 formatted_gpu_load= f"{gpu_load:<{text_max_size}.{text_max_size}}"
+                gpu_load_bar_width = 0
             else:
                 formatted_gpu_load= f"{gpu_readings[gpu_index]["GPU Load"]} {"%":<{text_max_size}.{text_max_size}}"
-                gpu_load_bar_width= min(49, int((gpu_load / 100) * 49))
+                gpu_load_bar_width = min(49, int((gpu_load / 100) * 49))
 
             formatted_gpu_load_attr= classify(gpu_load, GPU_LOAD_THRESHOLDS)
 
@@ -534,7 +535,7 @@ class ProcessFormatter:
 
             cpu = process.cpu_load
             row[7].value = f"{cpu:<6.6}"
-            row[7].style = 0 if cpu < 50 else 1 if cpu < 80 else 2
+            row[7].style = 0 if cpu < 50.0 else 1 if cpu < 80.0 else 2
 
             #converst from MiB to GB or MB
             if process.vsize > 1024:

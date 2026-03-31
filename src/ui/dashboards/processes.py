@@ -61,9 +61,9 @@ class ProcessDashboard:
 
     def resize(self, stdscr: curses.window, dash_coordinates: object):
         self.process_dashboard= stdscr
+        self.__diff_engine.force_write= True
 
         self.draw_static_interface(dash_coordinates)
-        self.__diff_engine.force_write= True
 
     def visible_content(self, scroll_pos: int) -> list:
         process_list= self.process_formatter.formatted_processes_output
@@ -80,7 +80,7 @@ class ProcessDashboard:
 
     def draw_static_interface(self, dash_coordinates: object):
 
-        window_max_columns = self.window_max_columns = dash_coordinates.max_x
+        window_max_columns = self.window_max_columns = dash_coordinates.max_x - 1
         self.window_max_lines = dash_coordinates.max_y
 
         if dash_coordinates.sys_disabled is True:

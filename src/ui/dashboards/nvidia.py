@@ -32,8 +32,8 @@ class NvidiaDashboard:
         self.bar_style_map= bar_map
 
     def resize(self, stdscr: curses.window, dash_coordinates: object):
-        self.nvidia_dashboard= stdscr    
-
+        self.nvidia_dashboard = stdscr    
+        self.__diff_engine.force_write = True
         self.draw_static_interface(dash_coordinates)
 
     def update_data_pipeline(self, schedule: dict) -> list:

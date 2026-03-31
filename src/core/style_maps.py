@@ -15,3 +15,10 @@ bar_map= (
             curses.A_DIM,
             curses.color_pair(6) , #white text, green background
         )
+
+button_map= (
+    curses.color_pair(5), #blue text, for the label
+    curses.color_pair(1), #green text , for the toggle
+    curses.color_pair(2), #yellow text, for the toggle
+    curses.color_pair(3), #red text, for the toggle
+)

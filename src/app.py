@@ -1,5 +1,6 @@
 from core import scheduler, file_handling, layout_manager
 from ui.dashboards import memory, cpu, network, nvidia, processes
+from ui.button import Button, GlobalButton
 import curses
 from time import sleep
 
@@ -19,12 +20,17 @@ class Application:
         "process_dashboard",
         "scroll_pos",
         "layout_controller",
-        "dashboard_dict"
+        "dashboard_dict",
+        "dash_buttons",
+        "global_buttons"
     )
 
     def __init__ (self, stdscr):
+        #cursor is invisible
         curses.curs_set(0)
-        
+        #capture mouse clicks 
+        curses.mousemask(curses.BUTTON1_CLICKED | curses.BUTTON4_PRESSED | curses.BUTTON5_PRESSED)
+
         #initialize colors
         curses.start_color()
         curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
@@ -33,14 +39,32 @@ class Application:
         curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
         curses.init_pair(5, curses.COLOR_BLUE, curses.COLOR_BLACK)
         curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_GREEN)
+        curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLUE)
         #set bkgd
         stdscr.bkgd(" ", curses.color_pair(4))
         stdscr.clear()
+
+        #initialize the buttons
+        from core.style_maps import button_map
+        button_style_map = button_map
+        self.global_buttons = {
+            # "settings": GlobalButton("Settings", button_style_map),
+            "dash_toggle": GlobalButton("Top Dashboards", button_style_map)
+        }
+        self.dash_buttons = {
+            "cpu": Button("| Disable |", button_style_map),
+            "mem": Button("| Disable |", button_style_map),
+            "net": Button("| Disable |", button_style_map),
+            "nvidia": Button("| Disable |", button_style_map),
+            "process": Button("| Disable |", button_style_map),
+            "cpu_load": Button("| Disable |", button_style_map),
+        }
 
         #assing the stdscr
         self.stdscr = stdscr
         self.stdscr.nodelay(True) #non blocking input
         self.stdscr.keypad(True) #accept arrows key etc.
+
 
         self.running = True
         self.files_path= file_handling.NeededFiles()
@@ -66,6 +90,7 @@ class Application:
         self.process_dashboard= processes.ProcessDashboard(stdscr, self.files_path)
 
         #initialize the layout manager
+        self.layout_controller = layout_manager.LayoutController(stdscr)
         self.dashboard_dict= {
             "cpu": self.cpu_dashboard,
             "cpu_load": self.cpu_load_dashboard,
@@ -74,24 +99,16 @@ class Application:
             "nvidia": self.nvidia_dashboard,
             "process": self.process_dashboard,
         }
-        self.layout_controller = layout_manager.LayoutController(stdscr)
 
-    def handle_input(self, stdscr):
+    def handle_input(self, stdscr: curses.window):
 
         while True:
             key= stdscr.getch()
 
-            if key == curses.KEY_UP:
-                self.scroll_pos -= 1
-                self.scroll_pos= max(0, self.scroll_pos)
-                    
-            if key == curses.KEY_DOWN:
-                self.scroll_pos += 1
-            
             if key == curses.KEY_RESIZE:
-                stdscr= self.stdscr
                 stdscr.clear()
-                self.layout_controller.on_resize(stdscr, self.dashboard_dict)
+                self.layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
+                return
             
             if key == ord("q"):
                 self.running= False
@@ -99,15 +116,56 @@ class Application:
                 self.cpu_dashboard.cpu_temp_readings.close_temp_files()
                 self.nvidia_dashboard.nvidia_service.close_nvidia_drivers()
 
+            if key == curses.KEY_UP:
+                self.scroll_pos = max(0, self.scroll_pos - 1)
+
+            elif key == curses.KEY_DOWN:
+                self.scroll_pos += 1
+
+            elif key == curses.KEY_MOUSE:
+                dash_buttons = self.dash_buttons
+                layout_controller = self.layout_controller
+                try:
+                    _, mx, my, _, bstate = curses.getmouse()
+                except curses.error:
+                    return
+
+                if bstate & curses.BUTTON4_PRESSED:
+                    self.scroll_pos = max(0, self.scroll_pos - 1)
+
+                elif bstate & curses.BUTTON5_PRESSED:
+                    self.scroll_pos += 1
+
+                for btn in dash_buttons:
+                    if dash_buttons[btn].is_clicked(my, mx):
+                        layout_controller.usr_dash_disabled[btn] = True
+                        stdscr.clear()
+                        layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
+                        layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
+                        return
+                    
+
+                if self.global_buttons["dash_toggle"].is_clicked(my, mx):
+                    stdscr.clear()
+                    for btn in dash_buttons:
+                        layout_controller.usr_dash_disabled[btn] = False
+
+                    layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
+                    layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
+                    return
+
             if key == -1:
                 break  # no key
 
     def run(self):
+        
         #create local references
-        stdscr= self.stdscr
-        scheduler= self.scheduler
-        layout_controller= self.layout_controller
-        dashboard_dict= self.dashboard_dict
+        stdscr = self.stdscr
+        scheduler = self.scheduler
+        layout_controller = self.layout_controller
+        dashboard_dict = self.dashboard_dict
+        dash_buttons = self. dash_buttons
+        global_buttons = self.global_buttons
 
         #mem
         mem_dashboard= self.mem_dashboard
@@ -137,8 +195,8 @@ class Application:
         nvidia_dashboard.assign_style()
         process_dashboard.assign_style()
 
-        layout_controller.calculate_layout(dashboard_dict)
-        layout_controller.apply_layout(dashboard_dict)
+        layout_controller.calculate_layout(dashboard_dict, dash_buttons, global_buttons)
+        layout_controller.apply_layout(dashboard_dict, dash_buttons, global_buttons, stdscr)
 
         while self.running:
 

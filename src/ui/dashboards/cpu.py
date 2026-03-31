@@ -273,7 +273,7 @@ class CPULoadDashboard:
             x = start_x + col * col_width
             last_line_y = y
 
-            if y >= start_y + usable_height or y >= window_max_lines:
+            if y >= start_y + usable_height:
                 break
 
             cpu_load_positions.append((y, x))
