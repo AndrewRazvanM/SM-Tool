@@ -30,14 +30,14 @@ class LayoutController:
         "dynamic_layout",
         "too_small",
         "header_height",
-        "nr_top_dash_visible",
+        "nr_dash_visible",
         "top_dash_stack"
     )
 
     def __init__ (self, stdscr):
         self.window_max_lines, self.window_max_columns = stdscr.getmaxyx()
 
-        self.nr_top_dash_visible = 0
+        self.nr_dash_visible = 0
         self.top_dash_stack = [
             "cpu",
             "mem",
@@ -71,10 +71,10 @@ class LayoutController:
 
     def place_global_btn(self, global_buttons: dict):
 
-        global_buttons["dash_toggle"].update_button(0, 0, False, self.nr_top_dash_visible)
+        global_buttons["dash_toggle"].update_button(0, 0, False, self.nr_dash_visible)
 
     def calculate_layout(self, dashboards: dict, buttons: dict, global_buttons: dict):
-        self.nr_top_dash_visible = 0
+        self.nr_dash_visible = 0
 
         #local references
         usr_dash_disabled = self.usr_dash_disabled
@@ -139,6 +139,7 @@ class LayoutController:
                     window_max_columns,
                     dash_not_disabled
                     )
+                self.nr_dash_visible += 1
 
             cpu_load_dash.calculate_layout(dynamic_layout["cpu_load"])
             self.place_global_btn(global_buttons)
@@ -161,9 +162,7 @@ class LayoutController:
                 #button is on the last line of the dashboard. Top dashboard are 10 lines and 51 columns
                 buttons[dash].update_position(dashboard_min_y + 10, x_pos + 51 - buttons[dash].width - 2, usr_disabled)
                 x_pos += top_dash_width #will move x_pos if should_render is True
-                self.nr_top_dash_visible += 1
-
-        self.place_global_btn(global_buttons)
+                self.nr_dash_visible += 1
 
         if x_pos > 0:
             dyn_dash_y_pos = top_dashboards_max_y
@@ -184,6 +183,7 @@ class LayoutController:
                     window_max_columns,
                     dash_not_disabled
                 )
+                self.nr_dash_visible += 1
                 cpu_load_dash.calculate_layout(dynamic_layout["cpu_load"])
                 process_start_y = cpu_load_dash.last_line_y + yspace_between_dashboards
                 #goes around the dash title
@@ -206,8 +206,11 @@ class LayoutController:
                         window_max_columns,
                         dash_not_disabled
                     )
+                    self.nr_dash_visible += 1
                     button_x_pos = window_max_columns - buttons["process"].width - 1
                     buttons["process"].update_position(process_start_y - 1, button_x_pos, dash_not_disabled)
+
+            self.place_global_btn(global_buttons)
 
     def apply_layout(self, dashboards: dict, buttons: dict, global_buttons: dict, stdscr):
         static_layout = self.static_layout

@@ -44,22 +44,6 @@ class Application:
         stdscr.bkgd(" ", curses.color_pair(4))
         stdscr.clear()
 
-        #initialize the buttons
-        from core.style_maps import button_map
-        button_style_map = button_map
-        self.global_buttons = {
-            # "settings": GlobalButton("Settings", button_style_map),
-            "dash_toggle": GlobalButton("Top Dashboards", button_style_map)
-        }
-        self.dash_buttons = {
-            "cpu": Button("| Disable |", button_style_map),
-            "mem": Button("| Disable |", button_style_map),
-            "net": Button("| Disable |", button_style_map),
-            "nvidia": Button("| Disable |", button_style_map),
-            "process": Button("| Disable |", button_style_map),
-            "cpu_load": Button("| Disable |", button_style_map),
-        }
-
         #assing the stdscr
         self.stdscr = stdscr
         self.stdscr.nodelay(True) #non blocking input
@@ -99,6 +83,27 @@ class Application:
             "nvidia": self.nvidia_dashboard,
             "process": self.process_dashboard,
         }
+
+         #initialize the buttons
+        from core.style_maps import button_map
+        button_style_map = button_map
+        self.global_buttons = {
+            # "settings": GlobalButton("Settings", button_style_map),
+            "dash_toggle": GlobalButton("Dashboards", button_style_map)
+        }
+        self.dash_buttons = {
+            "cpu": Button("| Disable |", button_style_map),
+            "mem": Button("| Disable |", button_style_map),
+            "net": Button("| Disable |", button_style_map),
+            "nvidia": Button("| Disable |", button_style_map),
+            "process": Button("| Disable |", button_style_map),
+            "cpu_load": Button("| Disable |", button_style_map),
+        }
+    
+    def clear_region_clrtoeol(win: curses.window, y: int, x: int, height: int):
+        for row in range(height):
+            win.move(y + row, x)
+            win.clrtoeol()
 
     def handle_input(self, stdscr: curses.window):
 
@@ -147,8 +152,8 @@ class Application:
 
                 if self.global_buttons["dash_toggle"].is_clicked(my, mx):
                     stdscr.clear()
-                    for btn in dash_buttons:
-                        layout_controller.usr_dash_disabled[btn] = False
+                    for dash in layout_controller.usr_dash_disabled:
+                        layout_controller.usr_dash_disabled[dash] = False
 
                     layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
                     layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
