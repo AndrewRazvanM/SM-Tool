@@ -1,4 +1,4 @@
-from core import scheduler, file_handling, layout_manager
+from core import scheduler, file_handling, layout_controller
 from ui.dashboards import memory, cpu, network, nvidia, processes
 from ui.button import Button, GlobalButton
 import curses
@@ -74,7 +74,7 @@ class Application:
         self.process_dashboard= processes.ProcessDashboard(stdscr, self.files_path)
 
         #initialize the layout manager
-        self.layout_controller = layout_manager.LayoutController(stdscr)
+        self.layout_controller = layout_controller.LayoutController(stdscr)
         self.dashboard_dict= {
             "cpu": self.cpu_dashboard,
             "cpu_load": self.cpu_load_dashboard,
