@@ -258,7 +258,7 @@ class CPULoadDashboard:
         rows = min(threads, max_rows)
         columns = -(-threads // rows)  # ceil division
         col_width = max(min_bar_width, usable_width // columns)
-        self.max_bar_width = col_width - 2
+        self.max_bar_width = col_width - 1
 
         cpu_load_positions = []
 
@@ -293,7 +293,7 @@ class CPULoadDashboard:
         dash.addstr(start_y + 1, start_x + 15, "CPU Load Dashboard", curses.A_BOLD)
 
         positions = self.__cpu_load_positions
-        col_width = self.max_bar_width + 2  # recreate bracket span
+        col_width = self.max_bar_width
 
         # Draw total CPU bar
         dash.addch(positions[0][0], positions[0][1], "[")

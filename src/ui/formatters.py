@@ -301,9 +301,11 @@ class CPULoadFormatter:
         if not formatted:
             formatted = [TextStyle("N/A", 3) for _ in cpu_load]
 
+        symbol_str = f"{"%":<{cpu_load_bar_ratio}}"
+
         for idx, cpu in enumerate(cpu_load):
             val = cpu_load[cpu]
-            text = f"{cpu}: {val}%"[:cpu_load_bar_ratio - 1]  # Truncate if necessary
+            text = f"{cpu}: {val} {symbol_str}"[:cpu_load_bar_ratio - 2]  # Truncate if necessary
             formatted[idx].value = text
             formatted[idx].style = 0
 
