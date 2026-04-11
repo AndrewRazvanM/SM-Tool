@@ -1,5 +1,8 @@
 import curses
 
+#Button constans
+_TOT_NR_DASHBOARDS = 7 #used by the EnableDashButton. It's the total number of dashboards
+
 class Button:
     __slots__=(
         "y",
@@ -25,7 +28,7 @@ class Button:
             attr = self.button_style_map[0]
 
             # Draw label centered
-            win.addstr(self.y + 1, self.x + 1, self.label, attr)
+            win.addstr(self.y, self.x + 1, self.label, attr)
     
     def is_clicked(self, mouse_y, mouse_x):
         if self.disabled is False:
@@ -33,7 +36,7 @@ class Button:
         else:
             return False
     
-class GlobalButton:
+class EnableDashButton:
     __slots__=(
         "y",
         "x",
@@ -42,48 +45,43 @@ class GlobalButton:
         "label",
         "button_style_map",
         "toggle_val",
-        "toggle_str"
+        "attr_toggle"
     )
     def __init__(self, label: str, button_style_map:tuple) -> object:
         self.label = label
         self.button_style_map = button_style_map
         self.disabled = True
-        self.toggle_str = "None"
-        self.width = len(label) + len(self.toggle_str) + 1  # padding
+        self.width = len(label) + 7  # padding
 
-    def update_button(self, y: int, x:int, disabled: bool, toggle: int):
+    def update_position(self, y: int, x:int, disabled: bool, toggle: int):
         self.y = y
         self.x = x
         self.disabled = disabled
         self.toggle_val = toggle
 
         if toggle == 0:
-            self.toggle_str = "None" 
-        elif toggle < 6:  #got 6 dsahboards in total
-            self.toggle_str = "Some"
+            self.attr_toggle = self.button_style_map[3]  #red
+        elif toggle < _TOT_NR_DASHBOARDS: 
+            self.attr_toggle = self.button_style_map[2] #yellow
         else:
-            self.toggle_str = "All " #padding manually
+            self.attr_toggle = self.button_style_map[1]  #green
 
-        self.width = len(self.label) + len(self.toggle_str) + 6  # padding. when rendering, extra characters are added
+        self.width = len(self.label) + 7  # in draw() 6 extra characters are added + 1 for the nr. of dashboards
 
     def draw(self, win: curses.window):
         if self.disabled is False:
             y = self.y 
             x = self.x
-            toggle = self.toggle_str
+
             attr_label = self.button_style_map[0] #blue
-            if toggle == "None":
-                attr_toggle = self.button_style_map[3]  #red
-            elif toggle == "All":
-                attr_toggle = self.button_style_map[1]  #green
-            else:
-                attr_toggle = self.button_style_map[2] #yellow
 
             # Draw label centered
-            win.addstr(y + 1, x + 1, f"| {self.label} ", attr_label)
-            win.addstr(f"{toggle} ", attr_toggle)
+            win.addstr(y, x , f"| {self.label} ", attr_label)
+            win.addstr(f"{self.toggle_val} ", self.attr_toggle)
             win.addch("|", attr_label)
-            win.hline(y + 2, x + 5, ".", self.toggle_val, attr_toggle)
+            #Visually shows how many dashboards are showing vs the maximum number
+            win.hline(y + 1, x + 5, ".", self.toggle_val, self.attr_toggle)
+            win.hline(y + 1, x + 5 + self.toggle_val, ".", _TOT_NR_DASHBOARDS - self.toggle_val, self.button_style_map[3])
 
 
     def is_clicked(self, mouse_y, mouse_x):

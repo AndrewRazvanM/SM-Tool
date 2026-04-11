@@ -18,10 +18,6 @@ _TOP_ROW_BOTTOM = _HEADER_HEIGHT + _TOP_DASH_HEIGHT   # = 15
 class DashCoordinates:
     """
     Stores the position and size of one dashboard panel.
-
-    Using __slots__ avoids a per-instance __dict__, which saves a small
-    amount of memory and makes attribute access slightly faster — worth
-    doing for objects that are created once and read every frame.
     """
     __slots__ = ("start_y", "start_x", "max_y", "max_x", "sys_disabled")
 
@@ -75,12 +71,13 @@ class LayoutController:
         self.too_small       = False
 
         # Defines the left-to-right render order of the top-row dashboards.
-        self.top_dash_stack = ["cpu", "mem", "net", "nvidia"]
+        self.top_dash_stack = ["cpu", "mem", "net", "nvidia", "io_tot"]
 
         # Per-dashboard user toggle.  False = shown, True = hidden by the user.
         self.usr_dash_disabled = {
             "cpu": False, "cpu_load": False, "mem": False,
             "net": False, "nvidia": False, "process": False,
+            "io_tot": False,
         }
 
         # Computed positions — start fully disabled; calculate_layout fills them in.
@@ -133,7 +130,7 @@ class LayoutController:
             # aligned to its right edge.
             btn = buttons[key]
             btn.update_position(
-                _HEADER_HEIGHT + 10,
+                _HEADER_HEIGHT + 11,
                 x + _TOP_DASH_WIDTH - btn.width - 2,
                 False,
             )
@@ -167,7 +164,7 @@ class LayoutController:
             # move the button to the right if there is space, else pin left.
             btn_x = self.window_max_columns - buttons["cpu_load"].width - 1
             buttons["cpu_load"].update_position(
-                start_y, btn_x if btn_x > 45 else 0, False
+                start_y + 1, btn_x if btn_x > 45 else 0, False
             )
         else:
             # Hidden by the user: process starts where cpu_load would have.
@@ -185,7 +182,7 @@ class LayoutController:
             self.nr_dash_visible += 1
             btn_x = self.window_max_columns - buttons["process"].width - 1
             # Button sits on the row just above the dashboard (the gap row).
-            buttons["process"].update_position(process_start_y - 1, btn_x, False)
+            buttons["process"].update_position(process_start_y, btn_x, False)
 
     # ------------------------------------------------------------------
     # Public API
@@ -218,7 +215,8 @@ class LayoutController:
         # --- Tier 1: window too small for anything ---
         if self.window_max_lines < _HEADER_HEIGHT or self.window_max_columns < _MIN_WIN_X:
             self.too_small = True
-            global_buttons["dash_toggle"].update_button(0, 0, False, self.nr_dash_visible)
+            global_buttons["dash_toggle"].update_position(2, 0, False, self.nr_dash_visible)
+            global_buttons["settings"].update_position(1, 0, False)
             return
 
         self.too_small = False
@@ -227,12 +225,10 @@ class LayoutController:
         if self.window_max_lines < _TOP_ROW_BOTTOM + 1:
             # Show cpu_load only if there are enough rows (header + at least 3 content rows)
             if self.window_max_lines > _HEADER_HEIGHT + 2:
-                self.dynamic_layout["cpu_load"].update(
-                    _HEADER_HEIGHT, 0, self.window_max_lines, self.window_max_columns, False
-                )
-                self.nr_dash_visible += 1
+                self._place_cpu_load(dashboards, buttons, _HEADER_HEIGHT)
             dashboards["cpu_load"].calculate_layout(self.dynamic_layout["cpu_load"])
-            global_buttons["dash_toggle"].update_button(0, 0, False, self.nr_dash_visible)
+            global_buttons["dash_toggle"].update_position(2, 0, False, self.nr_dash_visible)
+            global_buttons["settings"].update_position(1, 0, False)
             return
 
         # --- Tier 3: full layout ---
@@ -252,7 +248,8 @@ class LayoutController:
             process_start_y  = self._place_cpu_load(dashboards, buttons, cpu_load_start_y)
             self._place_process(buttons, process_start_y)
 
-        global_buttons["dash_toggle"].update_button(0, 0, False, self.nr_dash_visible)
+        global_buttons["dash_toggle"].update_position(2, 0, False, self.nr_dash_visible)
+        global_buttons["settings"].update_position(0, 0, False)
 
     def apply_layout(self, dashboards: dict, buttons: dict, global_buttons: dict, stdscr):
         """

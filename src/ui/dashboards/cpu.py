@@ -100,6 +100,7 @@ class CPUDashboard:
         dash.hline(3 + start_y, 1 + start_x, "=", 49)
 
         # CPU temperature labels
+        dash.vline(4 + start_y, 26 + start_x, "|", 7)
         dash.addstr(8 + start_y, 13 + start_x, f"Temp sensor is {sensor_name}"[:36])
         dash.addstr(9 + start_y, 7 + start_x, "CPU Die:")
         dash.addstr(9 + start_y, 34 + start_x, "CPU Avg:")
@@ -107,7 +108,6 @@ class CPUDashboard:
         # CPU pressure labels
         dash.addstr(4 + start_y, 11 + start_x, "PSI:")
         dash.addstr(4 + start_y, 34 + start_x, "PSI Health:")
-        dash.vline(4 + start_y, 26 + start_x, "|", 7)
         dash.addstr(5 + start_y, 1 + start_x, "Avg10:")
         dash.addstr(5 + start_y, 8 + start_x, "| Avg60:")
         dash.addstr(5 + start_y, 17 + start_x, "| Avg300:")
@@ -278,7 +278,7 @@ class CPULoadDashboard:
 
             cpu_load_positions.append((y, x))
 
-        self.last_line_y = last_line_y
+        self.last_line_y = last_line_y + 1
         self.__cpu_load_positions = cpu_load_positions
 
     def draw_static_interface(self, dash_coordinates: object):
@@ -312,12 +312,13 @@ class CPULoadDashboard:
 
         dash = self.cpu_load_dashboard
         positions = self.__cpu_load_positions
+        positions_len = len(positions)
         content_list = self.formatter.formatted_cpu_load
         bar_map = self.bar_style_map
         max_width = self.max_bar_width
 
         for idx, content in enumerate(content_list):
-            if idx >= len(positions):
+            if idx >= positions_len:
                 break
             width = content.bar_width
             dash.addnstr(positions[idx][0], positions[idx][1] + 1, content.value[:width], max_width, bar_map[content.style])

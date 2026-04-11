@@ -76,23 +76,23 @@ class MemoryDashboard:
         #add title
         memory_dashboard.addstr(start_y+ 0, start_x+ 15, "Memory Dashboard", curses.A_BOLD)
 
-        memory_dashboard.addstr(start_y+ 1, start_x+ 2, "Some  |  Avg 10:")
-        memory_dashboard.addstr(start_y+ 2, start_x+ 8, "|  Avg 60:")
-        memory_dashboard.addstr(start_y+ 3, start_x+ 8, "| Avg 300:")
-        memory_dashboard.hline(start_y+ 4, start_x+ 1, "-", max_x - 2)
+        memory_dashboard.addstr(start_y+ 1, start_x + 2, "Some  |  Avg 10:")
+        memory_dashboard.addstr(start_y+ 2, start_x + 8, "|  Avg 60:")
+        memory_dashboard.addstr(start_y+ 3, start_x + 8, "| Avg 300:")
+        memory_dashboard.hline(start_y+ 4, start_x + 1, "-", max_x - 2)
         
-        memory_dashboard.addstr(start_y+ 5, start_x+ 2, "Full  |  Avg 10:")
-        memory_dashboard.addstr(start_y+ 6, start_x+ 8, "|  Avg 60:")
-        memory_dashboard.addstr(start_y+ 7, start_x+ 8, "| Avg 300:")
-        memory_dashboard.hline(start_y+ 8, start_x+ 1, "-", max_x - 2)
+        memory_dashboard.addstr(start_y+ 5, start_x + 2, "Full  |  Avg 10:")
+        memory_dashboard.addstr(start_y+ 6, start_x + 8, "|  Avg 60:")
+        memory_dashboard.addstr(start_y+ 7, start_x + 8, "| Avg 300:")
+        memory_dashboard.hline(start_y+ 8, start_x + 1, "-", max_x - 2)
 
-        memory_dashboard.addstr(start_y+ 9, start_x+ 7, "PSI Health:")
-        memory_dashboard.vline(start_y+ 1, start_x+ 26, "|", 10)
+        memory_dashboard.addstr(start_y+ 9, start_x + 7, "PSI Health:")
+        memory_dashboard.vline(start_y+ 1, start_x + 26, "|", 10)
 
-        memory_dashboard.addstr(start_y+ 1, start_x+ 28, "Total Memory:")
-        memory_dashboard.addstr(start_y+ 2, start_x+ 28, " Free Memory:")
-        memory_dashboard.addstr(start_y+ 5, start_x+ 28, "  Total SWAP:")
-        memory_dashboard.addstr(start_y+ 6, start_x+ 28, "   Free SWAP:")
+        memory_dashboard.addstr(start_y+ 1, start_x + 28, "Total Memory:")
+        memory_dashboard.addstr(start_y+ 2, start_x + 28, " Free Memory:")
+        memory_dashboard.addstr(start_y+ 5, start_x + 28, "  Total SWAP:")
+        memory_dashboard.addstr(start_y+ 6, start_x + 28, "   Free SWAP:")
         memory_dashboard.noutrefresh()
 
     def update_data_pipeline(self, schedule: dict):
@@ -188,6 +188,6 @@ class MemoryDashboard:
             attr= bar_style_map[style]
             width= min(24, mem_pressure[7].content.bar_width)
             memory_dashboard.hline(10 + start_y, 1 + start_x, " ", width, attr)
-            memory_dashboard.hline(10 + start_y, 1 + start_x + width, " ", 23 - width) 
+            memory_dashboard.hline(10 + start_y, 1 + start_x + width, " ", 24 - width) 
 
         memory_dashboard.noutrefresh()

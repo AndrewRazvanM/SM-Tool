@@ -142,6 +142,8 @@ class NetworkTraffic:
         except FileNotFoundError:
             throughput["N/A"]= Interface()
             throughput["N/A"].Type= "Physical"
+
+        self.prev_time = previous_time
             
         removed_networks= raw_readings.keys() - current_networks.keys()
         for to_delete in removed_networks:

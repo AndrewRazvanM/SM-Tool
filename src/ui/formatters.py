@@ -558,3 +558,15 @@ class ProcessFormatter:
             row[11].style= 4
 
             row[12].value= process.starttime #used by ContentDiff to check if process changed
+
+class IOTotalFormatter:
+    __slots__ = ("formatted_io_output")
+
+    def __init__(self):
+        self.formatted_io_output = []
+
+    def format(self, io_tot_readings: object ,schedule: dict) -> list:
+        if not schedule["io"]:
+            return
+        
+        

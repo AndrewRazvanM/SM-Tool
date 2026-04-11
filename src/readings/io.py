@@ -52,16 +52,27 @@ class DeviceIO:
         
 class ReadTotalIO:
 
+    __slots__ = (
+        "file_path",
+        "sectors_size",
+        "devices_total_io",
+        "prev_time"
+    )
+
     def __init__(self, file_path: object):
         self.file_path= file_path
         self.sectors_size= 512 #to implement actual check later
         self.devices_total_io= {}
         self.prev_time= monotonic()
 
-    def read_io_totals(self):
+    def read_io_totals(self, schedule: dict):
         """
         Gets the current readings for I/O Totals and updates the calculations where needed.
         """
+
+        if schedule["io"] is False:
+            return
+
         current_time= monotonic()
         time_delta= current_time - self.prev_time
         self.prev_time= current_time

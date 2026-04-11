@@ -1,6 +1,6 @@
 from core import scheduler, file_handling, layout_controller
-from ui.dashboards import memory, cpu, network, nvidia, processes
-from ui.button import Button, GlobalButton
+from ui.dashboards import memory, cpu, network, nvidia, processes, io_totals
+from ui.button import Button, EnableDashButton
 import curses
 from time import sleep
 
@@ -18,6 +18,7 @@ class Application:
         "network_dashboard",
         "nvidia_dashboard",
         "process_dashboard",
+        "io_tot_dashboard",
         "scroll_pos",
         "layout_controller",
         "dashboard_dict",
@@ -73,6 +74,9 @@ class Application:
         self.scroll_pos= 0
         self.process_dashboard= processes.ProcessDashboard(stdscr, self.files_path)
 
+        #for IO totals dashboard
+        self.io_tot_dashboard = io_totals.IOTotals(stdscr, self.files_path)
+
         #initialize the layout manager
         self.layout_controller = layout_controller.LayoutController(stdscr)
         self.dashboard_dict= {
@@ -82,14 +86,15 @@ class Application:
             "net": self.network_dashboard,
             "nvidia": self.nvidia_dashboard,
             "process": self.process_dashboard,
+            "io_tot": self.io_tot_dashboard,
         }
 
          #initialize the buttons
         from core.style_maps import button_map
         button_style_map = button_map
         self.global_buttons = {
-            # "settings": GlobalButton("Settings", button_style_map),
-            "dash_toggle": GlobalButton("Dashboards", button_style_map)
+            "settings": Button("| Settings |", button_style_map),
+            "dash_toggle": EnableDashButton("Dashboards", button_style_map)
         }
         self.dash_buttons = {
             "cpu": Button("| Disable |", button_style_map),
@@ -98,6 +103,7 @@ class Application:
             "nvidia": Button("| Disable |", button_style_map),
             "process": Button("| Disable |", button_style_map),
             "cpu_load": Button("| Disable |", button_style_map),
+            "io_tot": Button("| Disable |", button_style_map),
         }
     
     def clear_region_clrtoeol(win: curses.window, y: int, x: int, height: int):
@@ -149,7 +155,6 @@ class Application:
                         layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
                         return
                     
-
                 if self.global_buttons["dash_toggle"].is_clicked(my, mx):
                     stdscr.clear()
                     for dash in layout_controller.usr_dash_disabled:
@@ -188,9 +193,8 @@ class Application:
         #processes
         process_dashboard= self.process_dashboard
 
-        #create variable
-        memory_check_disable= False #need to implement in the MemInfo readings too. Needs to implement toggle for the user
-        disable_cpu_check= False
+        #io_tot
+        io_tot_dashboard = self.io_tot_dashboard
 
         #assing the styles
         mem_dashboard.assign_style()
@@ -199,6 +203,7 @@ class Application:
         network_dashboard.assign_style()
         nvidia_dashboard.assign_style()
         process_dashboard.assign_style()
+        io_tot_dashboard.assign_style()
 
         layout_controller.calculate_layout(dashboard_dict, dash_buttons, global_buttons)
         layout_controller.apply_layout(dashboard_dict, dash_buttons, global_buttons, stdscr)
@@ -216,6 +221,7 @@ class Application:
             network_dashboard.update_data_pipeline(schedule)
             nvidia_dashboard.update_data_pipeline(schedule)
             process_dashboard.update_data_pipeline(schedule)
+            io_tot_dashboard.update_data_pipeline(schedule)
 
             #handles scrolling through the process list
             self.scroll_pos= process_dashboard.visible_content(self.scroll_pos)
@@ -227,6 +233,7 @@ class Application:
             network_dashboard.render()
             nvidia_dashboard.render()
             process_dashboard.render()
+            io_tot_dashboard.render()
 
             curses.doupdate()
             #refresh rate of 10 hz
