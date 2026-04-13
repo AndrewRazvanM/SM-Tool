@@ -118,7 +118,6 @@ class Application:
 
             if key == curses.KEY_RESIZE:
                 stdscr.clear()
-                self.layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
                 self.layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
                 return
             
@@ -166,7 +165,6 @@ class Application:
                             clr_height = layout_controller.window_max_lines - layout_controller.dynamic_layout[btn].start_y
                             self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
 
-                        layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
                         layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
                         return
                     

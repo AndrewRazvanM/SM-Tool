@@ -29,8 +29,8 @@ class MemoryDashboard:
         self.mem_pressure_service= MemPressure(file_path)
         self.mem_formatter = MemoryFormatter()
         self.mem_p_formatter= MemoryPressureFormatter()
-        self.__diff_engine_p= ContentDiff() #for memory info
-        self.__diff_engine_m= ContentDiff() #for memory pressure
+        self.__diff_engine_p= ContentDiff()
+        self.__diff_engine_m= ContentDiff()
 
     def assign_style(self):
         from core.style_maps import text_map, bar_map
@@ -54,53 +54,60 @@ class MemoryDashboard:
         
         memory_dashboard= self.memory_dashboard
 
-        #starting position
         start_y= self.start_y = dash_coordinates.start_y 
         start_x= self.start_x = dash_coordinates.start_x
         max_x= dash_coordinates.max_x
 
-        #build the borders
-        # Draw corners first
+        # borders
         memory_dashboard.addch(start_y, start_x, curses.ACS_ULCORNER)
         memory_dashboard.addch(start_y, start_x + max_x - 1, curses.ACS_URCORNER)
         memory_dashboard.addch(start_y+ 11, start_x, curses.ACS_LLCORNER)
         memory_dashboard.addch(start_y+ 11, start_x + max_x - 1, curses.ACS_LRCORNER)
 
-        # Draw horizontal edges (width-1)
         memory_dashboard.hline(start_y, start_x+1, curses.ACS_HLINE, max_x - 2)
         memory_dashboard.hline(start_y+ 11, start_x+1, curses.ACS_HLINE, max_x - 2)
 
-        # Draw vertical edges (height-1)
         memory_dashboard.vline(start_y + 1, start_x, curses.ACS_VLINE, 10)
         memory_dashboard.vline(start_y + 1, start_x + max_x - 1, curses.ACS_VLINE, 10)
-        #add title
-        memory_dashboard.addstr(start_y+ 0, start_x+ 15, "Memory Dashboard", curses.A_BOLD)
 
-        memory_dashboard.addstr(start_y+ 1, start_x + 2, "Some  |  Avg 10:")
-        memory_dashboard.addstr(start_y+ 2, start_x + 8, "|  Avg 60:")
-        memory_dashboard.addstr(start_y+ 3, start_x + 8, "| Avg 300:")
-        memory_dashboard.hline(start_y+ 4, start_x + 1, "-", max_x - 2)
-        
-        memory_dashboard.addstr(start_y+ 5, start_x + 2, "Full  |  Avg 10:")
-        memory_dashboard.addstr(start_y+ 6, start_x + 8, "|  Avg 60:")
-        memory_dashboard.addstr(start_y+ 7, start_x + 8, "| Avg 300:")
-        memory_dashboard.hline(start_y+ 8, start_x + 1, "-", max_x - 2)
+        # title
+        memory_dashboard.addstr(start_y, start_x + 15, "Memory Dashboard", curses.A_BOLD)
 
-        memory_dashboard.addstr(start_y+ 9, start_x + 7, "PSI Health:")
-        memory_dashboard.vline(start_y+ 1, start_x + 26, "|", 10)
+        # PSI section (top)
+        memory_dashboard.addstr(start_y + 1, start_x + 2, "Some 10:")
+        memory_dashboard.addstr(start_y + 2, start_x + 2, "Some 60:")
+        memory_dashboard.addstr(start_y + 3, start_x + 2, "Some300:")
 
-        memory_dashboard.addstr(start_y+ 1, start_x + 28, "Total Memory:")
-        memory_dashboard.addstr(start_y+ 2, start_x + 28, " Free Memory:")
-        memory_dashboard.addstr(start_y+ 5, start_x + 28, "  Total SWAP:")
-        memory_dashboard.addstr(start_y+ 6, start_x + 28, "   Free SWAP:")
+        #separator
+        memory_dashboard.vline(start_y + 1, start_x + 20, "|", 3)
+
+        memory_dashboard.addstr(start_y + 1, start_x + 26, "Full 10:")
+        memory_dashboard.addstr(start_y + 2, start_x + 26, "Full 60:")
+        memory_dashboard.addstr(start_y + 3, start_x + 26, "Full300:")
+
+        memory_dashboard.addstr(start_y + 4, start_x + 3, "Health:")
+
+        # separator
+        memory_dashboard.hline(start_y + 5, start_x + 1, "-", max_x - 2)
+        memory_dashboard.addstr(start_y + 5, start_x + 10, "PSI")
+        memory_dashboard.addch(curses.ACS_UARROW)
+        memory_dashboard.addstr(" - Memory")
+        memory_dashboard.addch(curses.ACS_DARROW)
+
+        # memory info section
+        memory_dashboard.addstr(start_y + 6, start_x + 2, "Total Mem:")
+        memory_dashboard.addstr(start_y + 7, start_x + 2, "Free  Mem:")
+        memory_dashboard.addstr(start_y + 8, start_x + 2, "Total Swap:")
+        memory_dashboard.addstr(start_y + 9, start_x + 2, "Free  Swap:")
+
         memory_dashboard.noutrefresh()
 
     def update_data_pipeline(self, schedule: dict):
         mem_service= self.mem_service
         mem_pressure_service= self.mem_pressure_service
 
-        mem_formatter= self.mem_formatter #mem info
-        mem_p_formatter= self.mem_p_formatter #mem pressure
+        mem_formatter= self.mem_formatter
+        mem_p_formatter= self.mem_p_formatter
 
         mem_service.update(schedule)
         mem_pressure_service.read_mem(self.mem_check_disable, schedule)
@@ -109,7 +116,6 @@ class MemoryDashboard:
 
         self.__diff_engine_m.check_differences(mem_formatter.formatted_output)
         self.__diff_engine_p.check_differences(mem_p_formatter.formatted_output)
-
 
     def render(self):
         if self.__dashboard_disabled:
@@ -124,70 +130,53 @@ class MemoryDashboard:
         mem_info= self.__diff_engine_m.is_content_diff
         mem_pressure= self.__diff_engine_p.is_content_diff
 
-        #mem info
+        # -------------------------
+        # PSI PRESSURE (top)
+        # -------------------------
+        # Some
+        for i in range(3):
+            entry = mem_pressure[i]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                memory_dashboard.addstr(start_y + 1 + i, start_x + 12, entry.content.value, attr)
+
+        # Full
+        for i in range(3):
+            entry = mem_pressure[3 + i]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                memory_dashboard.addstr(start_y + 1 + i, start_x + 36, entry.content.value, attr)
+
+        # Health
+        health = mem_pressure[6]
+        if health.changed:
+            attr = style_map[health.content.style]
+            memory_dashboard.addstr(start_y + 4, start_x + 12, health.content.value, attr)
+
+        # Health bar
+        bar = mem_pressure[7]
+        if bar.changed:
+            attr = bar_style_map[bar.content.style]
+            memory_dashboard.hline(start_y + 4, start_x + 20, " ", bar.content.bar_width, attr)
+            memory_dashboard.hline(start_y + 4, start_x + 20 + bar.content.bar_width, " ", 31 - bar.content.bar_width)
+
+        # -------------------------
+        # MEMORY INFO (bottom)
+        # -------------------------
         if mem_info[0].changed:
-            style= mem_info[0].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(1 + start_y, 42 + start_x, mem_info[0].content.value, attr)
+            attr = style_map[mem_info[0].content.style]
+            memory_dashboard.addstr(start_y + 6, start_x + 16, mem_info[0].content.value, attr)
 
         if mem_info[1].changed:
-            style= mem_info[1].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(2 + start_y, 42 + start_x, mem_info[1].content.value, attr)
+            attr = style_map[mem_info[1].content.style]
+            memory_dashboard.addstr(start_y + 7, start_x + 16, mem_info[1].content.value, attr)
 
         if mem_info[2].changed:
-            style= mem_info[2].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(5 + start_y, 42 + start_x, mem_info[2].content.value, attr)
+            attr = style_map[mem_info[2].content.style]
+            memory_dashboard.addstr(start_y + 8, start_x + 16, mem_info[2].content.value, attr)
 
         if mem_info[3].changed:
-            style= mem_info[3].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(6 + start_y, 42 + start_x, mem_info[3].content.value, attr)
-        
-        #pressure readings
-        if mem_pressure[0].changed:
-            style= mem_pressure[0].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(1 + start_y, 19 + start_x, mem_pressure[0].content.value, attr)
-           
-        if mem_pressure[1].changed:
-            style= mem_pressure[1].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(2 + start_y, 19 + start_x, mem_pressure[1].content.value, attr)
-           
-        if mem_pressure[2].changed:
-            style= mem_pressure[2].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(3 + start_y, 19 + start_x, mem_pressure[2].content.value, attr)
-            
-        if mem_pressure[3].changed:
-            style= mem_pressure[3].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(5 + start_y, 19 + start_x, mem_pressure[3].content.value, attr)
-           
-        if mem_pressure[4].changed:
-            style= mem_pressure[4].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(6 + start_y, 19 + start_x, mem_pressure[4].content.value, attr)
-            
-        if mem_pressure[5].changed:
-            style= mem_pressure[5].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(7 + start_y, 19 + start_x, mem_pressure[5].content.value, attr)
-        
-        #PSI health
-        if mem_pressure[6].changed:
-            style= mem_pressure[6].content.style
-            attr= style_map[style]
-            memory_dashboard.addstr(9 + start_y, 19 + start_x, mem_pressure[6].content.value, attr)
-        
-        #Health bar
-        if mem_pressure[7].changed:
-            style= mem_pressure[7].content.style
-            attr= bar_style_map[style]
-            width= min(24, mem_pressure[7].content.bar_width)
-            memory_dashboard.hline(10 + start_y, 1 + start_x, " ", width, attr)
-            memory_dashboard.hline(10 + start_y, 1 + start_x + width, " ", 24 - width) 
+            attr = style_map[mem_info[3].content.style]
+            memory_dashboard.addstr(start_y + 9, start_x + 16, mem_info[3].content.value, attr)
 
         memory_dashboard.noutrefresh()

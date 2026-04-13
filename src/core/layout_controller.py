@@ -270,6 +270,7 @@ class LayoutController:
         Handle a KEY_RESIZE event: recalculate positions then redraw everything.
         """
         self.window_max_lines, self.window_max_columns = stdscr.getmaxyx()
+        self.calculate_layout(dashboards, buttons, global_buttons)
 
         for key, coords in self.static_layout.items():
             dashboards[key].resize(stdscr, coords)

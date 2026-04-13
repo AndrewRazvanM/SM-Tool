@@ -56,7 +56,7 @@ class CPUPressureFormatter:
             cpu_pressure_bar_width = int(cpu_pressure_health // 4.3)
             cpu_pressure_bar_width = max(1, min(cpu_pressure_bar_width, 23))
 
-            cpu_pressure_state = classify(cpu_pressure_health, CPU_HEALTH_THRESHOLDS)
+            cpu_pressure_state = classify(cpu_pressure_health, PRESSURE_HEALTH_THRESHOLDS)
 
         # --- Classify averages ---
         avg10_state = classify(cpu_avg10, CPU_AVG10_THRESHOLDS)
@@ -81,6 +81,8 @@ class CPUPressureFormatter:
 
         self.formatted_output = out
 
+MEM_MAX_BAR_WIDTH = 30
+
 class MemoryPressureFormatter:
     __slots__ = ("formatted_output",)
 
@@ -95,7 +97,6 @@ class MemoryPressureFormatter:
         txt_max_len= 5
         memory_some = system_pressure_readings.memory_some
         memory_full = system_pressure_readings.memory_full
-        memory_health = system_pressure_readings.memory_health
 
         out = self.formatted_output
 
@@ -112,7 +113,10 @@ class MemoryPressureFormatter:
         f300_state = classify(f300, FULL_300_THRESHOLDS)
 
         # --- health classification ---
-        health_score = memory_health[0]
+        penalty= (s10 + s60 * 2.00 + s300 * 3.00 + f10 * 20.00 + f60 * 40.00 + f300 * 60.00)
+        health_score= max(0,100 - penalty)
+        health_bar_width= min(MEM_MAX_BAR_WIDTH, int(health_score/3.2))
+
         if health_score == "N/A":
             score_state = 3
             bar_state = 3
@@ -129,10 +133,10 @@ class MemoryPressureFormatter:
         out[4].value, out[4].style = f"{f60:<{txt_max_len}}", f60_state
         out[5].value, out[5].style = f"{f300:<{txt_max_len}}", f300_state
 
-        out[6].value = f"{health_score:<{txt_max_len}.1f}" if health_score != "N/A" else "N/A"
+        out[6].value = f"{health_score:.1f}" if health_score != "N/A" else "N/A"
         out[6].style = score_state
 
-        out[7].bar_width = memory_health[1]
+        out[7].bar_width = health_bar_width
         out[7].style = bar_state
 
         self.formatted_output= out
@@ -561,45 +565,106 @@ class ProcessFormatter:
 
             row[12].value= process.starttime #used by ContentDiff to check if process changed
 
+# Tunables
+FIELDS_PER_DEVICE = 4  # name, read, write, iops
+TXT_MAX_LEN = 9
+
 class IOTotalFormatter:
-    __slots__ = ("formatted_io_output")
+    __slots__ = ("formatted_io_output",)
 
     def __init__(self):
         self.formatted_io_output = []
 
-    def format(self, io_tot_readings: object ,schedule: dict) -> list:
+    def format(self, io_tot_readings, schedule):
         if not schedule["io"]:
             return
+
+        devices = io_tot_readings.devices_total_io
+        out = self.formatted_io_output
+
+        required_len = len(devices) * FIELDS_PER_DEVICE
+
+        # resize
+        if len(out) < required_len:
+            for _ in range(len(out), required_len):
+                out.append(TextStyle(" ", 3))
+        elif len(out) > required_len:
+            del out[required_len:]
+
+        for idx, (name, dev) in enumerate(devices.items()):
+            base = idx * FIELDS_PER_DEVICE
+
+            read = dev.read_throughput
+            write = dev.write_throughput
+            iops = dev.iops
+
+            out[base + 0].value = f"{name:<{TXT_MAX_LEN}.{TXT_MAX_LEN}}"
+            out[base + 1].value = f"{read:<{TXT_MAX_LEN}.1f}" if read != "N/A" else "N/A"
+            out[base + 2].value = f"{write:<{TXT_MAX_LEN}.1f}" if write != "N/A" else "N/A"
+            out[base + 3].value = f"{iops:<{TXT_MAX_LEN}.1f}" if iops != "N/A" else "N/A"
+
+        self.formatted_io_output = out
         
-        formatted_io_output = self.formatted_io_output
-        device_io_dict = io_tot_readings.devices_total_io
+# Tunables
+IO_HEALTH_SCALE = 1.5
+IO_MAX_BAR_WIDTH = 30
 
-        formatted_out_len = len(formatted_io_output)
-        device_dict_len = len(device_io_dict)
 
-        if formatted_out_len < device_dict_len:
-            for _ in range(formatted_out_len, device_dict_len):
-                formatted_io_output.append(TextStyle(" ", 3))
-        elif formatted_out_len > device_dict_len:
-            del formatted_io_output[device_dict_len:]
-        
-        for idx, device_name in enumerate(device_io_dict):
-            object = device_io_dict[device_name]
-            name_str = f"{device_name:<6}"
-            read_throughput_str = f"{object.read_throughput:<4}"
-
-            formatted_io_output[idx].value = f"{name_str} {read_throughput_str}"
-
-        self.formatted_io_output= formatted_io_output
-        
 class IOPressureFormatter:
-    __slots__ = ("formatted_io_output")
+    __slots__ = ("formatted_io_output",)
 
     def __init__(self):
-        self.formatted_io_output = []
+        self.formatted_io_output = [TextStyle("N/A", 3) for _ in range(8)]
 
-    def format(self, io_pressure_readings: object ,schedule: dict) -> list:
+    def format(self, io_pressure_readings: object, schedule: dict) -> list:
         if not schedule["io"]:
             return
-        
+
+        out = self.formatted_io_output
+        txt_max_len = 5
+
+        some = io_pressure_readings.io_some
+        full = io_pressure_readings.io_full
+
+        s10, s60, s300, _ = some
+        f10, f60, f300, _ = full
+
+        # --- Classification ---
+        s10_state = classify(s10, IO_PRESSURE_THRESHOLDS)
+        s60_state = classify(s60, IO_PRESSURE_THRESHOLDS)
+        s300_state = classify(s300, IO_PRESSURE_THRESHOLDS)
+
+        f10_state = classify(f10, IO_PRESSURE_THRESHOLDS)
+        f60_state = classify(f60, IO_PRESSURE_THRESHOLDS)
+        f300_state = classify(f300, IO_PRESSURE_THRESHOLDS)
+
+        # --- Health computation ---
+        if s10 == "N/A":
+            health = "N/A"
+            bar_width = 0
+            health_state = 3
+        else:
+            penalty = (s10 * 2.0 + s60 * 5.0 + s300 * 10.0 +
+                       f10 * 10.0 + f60 * 20.0 + f300 * 50.0)
+
+            health = max(0.0, 100.0 - penalty * IO_HEALTH_SCALE)
+            bar_width = min(IO_MAX_BAR_WIDTH, int(health / 3.2))
+            health_state = classify(health, PRESSURE_HEALTH_THRESHOLDS)
+
+        # --- Write output ---
+        out[0].value, out[0].style = f"{s10:<{txt_max_len}.{txt_max_len}}", s10_state
+        out[1].value, out[1].style = f"{s60:<{txt_max_len}.{txt_max_len}}", s60_state
+        out[2].value, out[2].style = f"{s300:<{txt_max_len}.{txt_max_len}}", s300_state
+
+        out[3].value, out[3].style = f"{f10:<{txt_max_len}.{txt_max_len}}", f10_state
+        out[4].value, out[4].style = f"{f60:<{txt_max_len}.{txt_max_len}}", f60_state
+        out[5].value, out[5].style = f"{f300:<{txt_max_len}.{txt_max_len}}", f300_state
+
+        out[6].value = f"{health:<{txt_max_len}.1f}" if health != "N/A" else "N/A  " #manually padding
+        out[6].style = health_state
+
+        out[7].bar_width = bar_width
+        out[7].style = health_state
+
+        self.formatted_io_output = out
         

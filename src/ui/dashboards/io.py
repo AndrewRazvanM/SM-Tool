@@ -3,7 +3,6 @@ from readings.system_pressure import IOPressure
 from ui.formatters import IOTotalFormatter, IOPressureFormatter
 from ui.contentdiff import ContentDiff
 import curses
-
 class IOTotals:
     """IO Totals Dashboard monitor. It's 11 lines and 51 columns."""
     __slots__= (
@@ -55,60 +54,134 @@ class IOTotals:
         
         io_tot_dashboard= self.io_tot_dashboard
 
-        #starting position
         start_y = self.start_y = dash_coordinates.start_y 
         start_x = self.start_x = dash_coordinates.start_x
         max_x= dash_coordinates.max_x
 
-        #build the borders
-        # Draw corners first
+        # borders
         io_tot_dashboard.addch(start_y, start_x, curses.ACS_ULCORNER)
         io_tot_dashboard.addch(start_y, start_x + max_x - 1, curses.ACS_URCORNER)
         io_tot_dashboard.addch(start_y+ 11, start_x, curses.ACS_LLCORNER)
         io_tot_dashboard.addch(start_y+ 11, start_x + max_x - 1, curses.ACS_LRCORNER)
 
-        # Draw horizontal edges (width-1)
         io_tot_dashboard.hline(start_y, start_x+1, curses.ACS_HLINE, max_x - 2)
         io_tot_dashboard.hline(start_y+ 11, start_x+1, curses.ACS_HLINE, max_x - 2)
 
-        # Draw vertical edges (height-1)
         io_tot_dashboard.vline(start_y + 1, start_x, curses.ACS_VLINE, 10)
         io_tot_dashboard.vline(start_y + 1, start_x + max_x - 1, curses.ACS_VLINE, 10)
-        #add title
-        io_tot_dashboard.addstr(start_y+ 0, start_x+ 15, "IO Totals Dashboard", curses.A_BOLD)
 
-         # CPU pressure labels
-        io_tot_dashboard.addstr(start_y+ 1, start_x+ 2, "Some  |  Avg 10:")
-        io_tot_dashboard.addstr(start_y+ 2, start_x+ 8, "|  Avg 60:")
-        io_tot_dashboard.addstr(start_y+ 3, start_x+ 8, "| Avg 300:")
-        io_tot_dashboard.hline(start_y+ 4, start_x+ 1, "-", 23)
-        
-        io_tot_dashboard.addstr(start_y+ 5, start_x+ 2, "Full  |  Avg 10:")
-        io_tot_dashboard.addstr(start_y+ 6, start_x+ 8, "|  Avg 60:")
-        io_tot_dashboard.addstr(start_y+ 7, start_x+ 8, "| Avg 300:")
-        io_tot_dashboard.hline(start_y+ 8, start_x+ 1, "-", 23)
+        # title
+        io_tot_dashboard.addstr(start_y, start_x + 15, "IO Totals Dashboard", curses.A_BOLD)
 
-        io_tot_dashboard.addstr(start_y+ 9, start_x+ 7, "PSI Health:")
-        io_tot_dashboard.vline(start_y+ 1, start_x+ 24, "|", 10)
+        # PSI section
+        io_tot_dashboard.addstr(start_y + 1, start_x + 2, "Some 10:")
+        io_tot_dashboard.addstr(start_y + 2, start_x + 2, "Some 60:")
+        io_tot_dashboard.addstr(start_y + 3, start_x + 2, "Some300:")
+
+        #separator
+        io_tot_dashboard.vline(start_y + 1, start_x + 20, "|", 3)
+
+        io_tot_dashboard.addstr(start_y + 1, start_x + 26, "Full 10:")
+        io_tot_dashboard.addstr(start_y + 2, start_x + 26, "Full 60:")
+        io_tot_dashboard.addstr(start_y + 3, start_x + 26, "Full300:")
+
+        io_tot_dashboard.addstr(start_y + 4, start_x + 3, "Health:")
+
+        # separator
+        io_tot_dashboard.hline(start_y + 5, start_x + 1, "-", max_x - 2)
+        io_tot_dashboard.addstr(start_y + 5, start_x + 10, "PSI")
+        io_tot_dashboard.addch(curses.ACS_UARROW)
+        io_tot_dashboard.addstr(" - IO")
+        io_tot_dashboard.addch(curses.ACS_DARROW)
+
+        # device section header
+        io_tot_dashboard.addstr(start_y + 6, start_x + 2, "Devices:")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 12, "Read")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 24, "Write")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 36, "IOPS")
+
+        io_tot_dashboard.noutrefresh()
 
     def render(self):
 
         if self.__dashboard_disabled:
-                return
+            return
         
         io_tot_dashboard = self.io_tot_dashboard
 
         content_list_io = self.__diff_engine_io.is_content_diff
+        content_list_pressure = self.__diff_engine_pressure.is_content_diff
 
         start_y = self.start_y 
         start_x = self.start_x
 
         style_map = self.style_map
+        bar_style_map = self.bar_style_map
 
-        if content_list_io[0].changed:
-            style= content_list_io[0].content.style
-            attr= style_map[style]
-            io_tot_dashboard.addstr(1 + start_y, 28 + start_x, content_list_io[0].content.value, attr)
+        # -------------------------
+        # PSI PRESSURE (top)
+        # -------------------------
+        # Some
+        for i in range(3):
+            entry = content_list_pressure[i]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(start_y + 1 + i, start_x + 12, entry.content.value, attr)
+
+        # Full
+        for i in range(3):
+            entry = content_list_pressure[3 + i]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(start_y + 1 + i, start_x + 36, entry.content.value, attr)
+
+        # Health
+        health = content_list_pressure[6]
+        if health.changed:
+            attr = style_map[health.content.style]
+            io_tot_dashboard.addstr(start_y + 4, start_x + 12, health.content.value, attr)
+
+        # Health bar
+        bar = content_list_pressure[7]
+        if bar.changed:
+            attr = bar_style_map[bar.content.style]
+            io_tot_dashboard.hline(start_y + 4, start_x + 20, " ", bar.content.bar_width, attr)
+            io_tot_dashboard.hline(start_y + 4, start_x + 20 + bar.content.bar_width, " ", 31 - bar.content.bar_width)
+
+        # -------------------------
+        # IO TOTALS (bottom)
+        # -------------------------
+        FIELDS_PER_DEVICE = 4
+        row_index = 0
+
+        for idx in range(0, len(content_list_io), FIELDS_PER_DEVICE):
+            y = start_y + 7 + row_index
+
+            # name
+            entry = content_list_io[idx + 0]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(y, start_x + 2, entry.content.value, attr)
+
+            # read
+            entry = content_list_io[idx + 1]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(y, start_x + 12, entry.content.value, attr)
+
+            # write
+            entry = content_list_io[idx + 2]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(y, start_x + 24, entry.content.value, attr)
+
+            # iops
+            entry = content_list_io[idx + 3]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(y, start_x + 36, entry.content.value, attr)
+
+            row_index += 1
 
         io_tot_dashboard.noutrefresh()
 
