@@ -18,6 +18,17 @@ def classify(value, thresholds:tuple) -> int:
     for limit, state in thresholds:
         if value < limit:
             return state
+        
+def scale_formatter(value, scale: tuple):
+    """
+    Generic magnitude scaler. The value and scale must use the same units of measurement.
+    """
+
+    for factor, suffix in scale:
+        if value >= factor:
+            if factor == 1:
+                return f"{value:.0f} {suffix}"
+            return f"{value / factor:.1f} {suffix}"
 
 class TextStyle:
     __slots__ = ("value", "style", "bar_width")
@@ -81,6 +92,7 @@ class CPUPressureFormatter:
 
         self.formatted_output = out
 
+# Mem Pressure Tunables
 MEM_MAX_BAR_WIDTH = 30
 
 class MemoryPressureFormatter:
@@ -543,7 +555,7 @@ class ProcessFormatter:
             row[7].value = f"{cpu:<6.6}"
             row[7].style = 0 if cpu < 50.0 else 1 if cpu < 80.0 else 2
 
-            #converst from MiB to GB or MB
+            #converts from MiB to GB or MB
             if process.vsize > 1024:
                 row[8].value = f"{(process.vsize // 1024) * 1.048576:<1.0f} {'GB':<6}"
             else:
@@ -565,9 +577,12 @@ class ProcessFormatter:
 
             row[12].value= process.starttime #used by ContentDiff to check if process changed
 
-# Tunables
-FIELDS_PER_DEVICE = 4  # name, read, write, iops
-TXT_MAX_LEN = 9
+# IOTotal Tunables
+FIELDS_PER_DEVICE = 6  # name, read, write, read_latency, write_latency, time_busy
+FIRST_3_TXT_MAX_LEN = 9
+LAST_3_TXT_MAX_LEN = 6
+MILISECONDS = f"{"ms":<{LAST_3_TXT_MAX_LEN}}"
+
 
 class IOTotalFormatter:
     __slots__ = ("formatted_io_output",)
@@ -575,7 +590,7 @@ class IOTotalFormatter:
     def __init__(self):
         self.formatted_io_output = []
 
-    def format(self, io_tot_readings, schedule):
+    def format(self, io_tot_readings: object, schedule: dict):
         if not schedule["io"]:
             return
 
@@ -585,10 +600,11 @@ class IOTotalFormatter:
         required_len = len(devices) * FIELDS_PER_DEVICE
 
         # resize
-        if len(out) < required_len:
-            for _ in range(len(out), required_len):
+        actual_len = len(out)
+        if actual_len < required_len:
+            for _ in range(actual_len, required_len):
                 out.append(TextStyle(" ", 3))
-        elif len(out) > required_len:
+        elif actual_len > required_len:
             del out[required_len:]
 
         for idx, (name, dev) in enumerate(devices.items()):
@@ -596,19 +612,58 @@ class IOTotalFormatter:
 
             read = dev.read_throughput
             write = dev.write_throughput
-            iops = dev.iops
+            # write_str = f"{write:<{FIRST_3_TXT_MAX_LEN}.1f}"
+            read_latency = dev.read_latency
+            write_latency = dev.write_latency
+            time_busy = dev.time_busy
 
-            out[base + 0].value = f"{name:<{TXT_MAX_LEN}.{TXT_MAX_LEN}}"
-            out[base + 1].value = f"{read:<{TXT_MAX_LEN}.1f}" if read != "N/A" else "N/A"
-            out[base + 2].value = f"{write:<{TXT_MAX_LEN}.1f}" if write != "N/A" else "N/A"
-            out[base + 3].value = f"{iops:<{TXT_MAX_LEN}.1f}" if iops != "N/A" else "N/A"
+            if read == "N/A" or read == 0:
+                read_str = f"{read:<{FIRST_3_TXT_MAX_LEN}}"
+                read_state = 3
+            else:
+                read_str = scale_formatter(read, BINARY_UNITS_SCALES)
+                read_state = 0
+
+            if write == "N/A" or write == 0:
+                write_str = f"{write:<{FIRST_3_TXT_MAX_LEN}}"
+                write_state = 3
+            else:
+                write_str = scale_formatter(write, BINARY_UNITS_SCALES)
+                write_state = 0
+
+            out[base + 0].value = f"{name:<{FIRST_3_TXT_MAX_LEN}.{FIRST_3_TXT_MAX_LEN}}"
+            out[base + 0].style = 0
+            out[base + 1].value = f"{read_str:<{FIRST_3_TXT_MAX_LEN}.{FIRST_3_TXT_MAX_LEN}}" 
+            out[base + 1].style = read_state
+            out[base + 2].value = f"{write_str:<{FIRST_3_TXT_MAX_LEN}.{FIRST_3_TXT_MAX_LEN}}"
+            out[base + 2].style = write_state
+
+            if read_latency == "N/A" or read_latency == 0:
+                out[base + 3].value = f"{read_latency:<{LAST_3_TXT_MAX_LEN}}"
+                out[base + 3].style = 3
+            else:
+                out[base + 3].value = f"{read_latency:.1f}" + MILISECONDS 
+                out[base + 3].style = 0
+                
+            if write_latency == "N/A" or write_latency == 0:
+                out[base + 4].value = f"{write_latency:<{LAST_3_TXT_MAX_LEN}}"
+                out[base + 4].style = 3
+            else:
+                out[base + 4].value = f"{write_latency:.1f}" + MILISECONDS 
+                out[base + 4].style = 0
+
+            if time_busy == "N/A" or time_busy == 0:
+                out[base + 5].value = f"{time_busy:<{LAST_3_TXT_MAX_LEN - 1}}" #don't overwrite the border
+                out[base + 5].style = 3
+            else:
+                out[base + 5].value = f"{time_busy:<{LAST_3_TXT_MAX_LEN - 1}.1f}"
+                out[base + 5].style = 0
 
         self.formatted_io_output = out
         
-# Tunables
+# IO Pressure Tunables
 IO_HEALTH_SCALE = 1.5
 IO_MAX_BAR_WIDTH = 30
-
 
 class IOPressureFormatter:
     __slots__ = ("formatted_io_output",)

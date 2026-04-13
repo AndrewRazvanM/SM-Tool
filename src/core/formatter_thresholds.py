@@ -59,7 +59,7 @@ CPU_TEMP_THRESHOLDS = (
 )
 
 GPU_LOAD_THRESHOLDS = (
-    (50, 0),    # <= 70 → good
+    (50, 0),    # <= 50 → good
     (80, 1),    #<= 80 → warning
     (150, 2)    #>80 → critical #memory load cannot go over 100%. This should be safe
 )
@@ -68,4 +68,17 @@ IO_PRESSURE_THRESHOLDS = (
     (1.0, 0),
     (5.0, 1),
     (float("inf"), 2),
+)
+
+BINARY_UNITS_SCALES = (
+    (1024**3, "GiB"),
+    (1024**2, "MiB"),
+    (1024**1, "KiB"),
+    (1, "B"),
+)
+DECIMAL_UNITS_SCALES = (
+    (1000**3, "Gb"),
+    (1000**2, "Mb"),
+    (1000**1, "Kb"),
+    (1, "b"),
 )

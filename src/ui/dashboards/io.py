@@ -96,9 +96,11 @@ class IOTotals:
 
         # device section header
         io_tot_dashboard.addstr(start_y + 6, start_x + 2, "Devices:")
-        io_tot_dashboard.addstr(start_y + 6, start_x + 12, "Read")
-        io_tot_dashboard.addstr(start_y + 6, start_x + 24, "Write")
-        io_tot_dashboard.addstr(start_y + 6, start_x + 36, "IOPS")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 12, "Read/s")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 22, "Write/s")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 32, "rLat")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 38, "wLat")
+        io_tot_dashboard.addstr(start_y + 6, start_x + 45, "Util%")
 
         io_tot_dashboard.noutrefresh()
 
@@ -146,12 +148,12 @@ class IOTotals:
         if bar.changed:
             attr = bar_style_map[bar.content.style]
             io_tot_dashboard.hline(start_y + 4, start_x + 20, " ", bar.content.bar_width, attr)
-            io_tot_dashboard.hline(start_y + 4, start_x + 20 + bar.content.bar_width, " ", 31 - bar.content.bar_width)
+            io_tot_dashboard.hline(start_y + 4, start_x + 20 + bar.content.bar_width + 1, " ", 30 - bar.content.bar_width)
 
         # -------------------------
         # IO TOTALS (bottom)
         # -------------------------
-        FIELDS_PER_DEVICE = 4
+        FIELDS_PER_DEVICE = 6
         row_index = 0
 
         for idx in range(0, len(content_list_io), FIELDS_PER_DEVICE):
@@ -173,13 +175,26 @@ class IOTotals:
             entry = content_list_io[idx + 2]
             if entry.changed:
                 attr = style_map[entry.content.style]
-                io_tot_dashboard.addstr(y, start_x + 24, entry.content.value, attr)
+                io_tot_dashboard.addstr(y, start_x + 22, entry.content.value, attr)
 
-            # iops
+
+            # read latency
             entry = content_list_io[idx + 3]
             if entry.changed:
                 attr = style_map[entry.content.style]
-                io_tot_dashboard.addstr(y, start_x + 36, entry.content.value, attr)
+                io_tot_dashboard.addstr(y, start_x + 32, entry.content.value, attr)
+
+            # write latency
+            entry = content_list_io[idx + 4]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(y, start_x + 38, entry.content.value, attr)
+
+            # utilization % (or time_busy)
+            entry = content_list_io[idx + 5]
+            if entry.changed:
+                attr = style_map[entry.content.style]
+                io_tot_dashboard.addstr(y, start_x + 45, entry.content.value, attr)
 
             row_index += 1
 
