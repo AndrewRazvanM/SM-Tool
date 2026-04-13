@@ -110,29 +110,30 @@ class IOPressure:
         self.io_full= ["N/A"] * 4
 
 
-    def read_io(self, io_check_disable):
+    def read_io(self, schedule: dict):
+
+        if schedule["io"] is False:
+            return
+        
         file_paths= self.file_paths
 
-        if io_check_disable is False:
-            try:
-                for line in file_paths.get_file("io_pressure"):
-                    if line.startswith("some"):
-                        parts_io = line.split()
+        try:
+            for line in file_paths.get_file("io_pressure"):
+                if line.startswith("some"):
+                    parts_io = line.split()
 
-                        self.io_some[0] = parts_io[1][6:]
-                        self.io_some[1] = parts_io[2][6:]
-                        self.io_some[2] = parts_io[3][7:]
-                        self.io_some[3] = parts_io[4][6:]
+                    self.io_some[0] = parts_io[1][6:]
+                    self.io_some[1] = parts_io[2][6:]
+                    self.io_some[2] = parts_io[3][7:]
+                    self.io_some[3] = parts_io[4][6:]
 
-                    if line.startswith("full"):
-                        parts_io_full = line.split()
+                if line.startswith("full"):
+                    parts_io_full = line.split()
 
-                        self.io_full[0] = parts_io_full[1][6:]
-                        self.io_full[1] = parts_io_full[2][6:]
-                        self.io_full[2] = parts_io_full[3][7:]
-                        self.io_full[3] = parts_io_full[4][6:]
+                    self.io_full[0] = parts_io_full[1][6:]
+                    self.io_full[1] = parts_io_full[2][6:]
+                    self.io_full[2] = parts_io_full[3][7:]
+                    self.io_full[3] = parts_io_full[4][6:]
 
-            except FileNotFoundError:
-                io_check_disable= True
-
-        return io_check_disable
+        except FileNotFoundError:
+            return

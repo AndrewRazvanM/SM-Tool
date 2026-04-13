@@ -512,7 +512,7 @@ class ProcessFormatter:
                 out.append([TextStyle("N/A", 3) for _ in range(13)])
 
             row = out[idx]
-            proc_user = usernames[process.uid]
+            proc_user = usernames.get(process.uid, str(process.uid))
                         
             row[0].value = f"{pid:<10}"
             row[0].style = 0
@@ -568,6 +568,37 @@ class IOTotalFormatter:
         self.formatted_io_output = []
 
     def format(self, io_tot_readings: object ,schedule: dict) -> list:
+        if not schedule["io"]:
+            return
+        
+        formatted_io_output = self.formatted_io_output
+        device_io_dict = io_tot_readings.devices_total_io
+
+        formatted_out_len = len(formatted_io_output)
+        device_dict_len = len(device_io_dict)
+
+        if formatted_out_len < device_dict_len:
+            for _ in range(formatted_out_len, device_dict_len):
+                formatted_io_output.append(TextStyle(" ", 3))
+        elif formatted_out_len > device_dict_len:
+            del formatted_io_output[device_dict_len:]
+        
+        for idx, device_name in enumerate(device_io_dict):
+            object = device_io_dict[device_name]
+            name_str = f"{device_name:<6}"
+            read_throughput_str = f"{object.read_throughput:<4}"
+
+            formatted_io_output[idx].value = f"{name_str} {read_throughput_str}"
+
+        self.formatted_io_output= formatted_io_output
+        
+class IOPressureFormatter:
+    __slots__ = ("formatted_io_output")
+
+    def __init__(self):
+        self.formatted_io_output = []
+
+    def format(self, io_pressure_readings: object ,schedule: dict) -> list:
         if not schedule["io"]:
             return
         

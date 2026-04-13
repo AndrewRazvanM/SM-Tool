@@ -26,6 +26,8 @@ class NeededFiles:
 
     def get_file(self, name: str):
         f = self.files[name]
+        if f is None:
+            raise FileNotFoundError(f"{name} not available")
         f.seek(0)
         return f
 

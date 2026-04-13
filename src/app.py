@@ -1,5 +1,5 @@
 from core import scheduler, file_handling, layout_controller
-from ui.dashboards import memory, cpu, network, nvidia, processes, io_totals
+from ui.dashboards import memory, cpu, network, nvidia, processes, io
 from ui.button import Button, EnableDashButton
 import curses
 from time import sleep
@@ -75,7 +75,7 @@ class Application:
         self.process_dashboard= processes.ProcessDashboard(stdscr, self.files_path)
 
         #for IO totals dashboard
-        self.io_tot_dashboard = io_totals.IOTotals(stdscr, self.files_path)
+        self.io_tot_dashboard = io.IOTotals(stdscr, self.files_path)
 
         #initialize the layout manager
         self.layout_controller = layout_controller.LayoutController(stdscr)

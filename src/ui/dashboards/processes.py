@@ -32,13 +32,7 @@ class ProcessDashboard:
         self.__diff_engine= ScrollWinContentDiff()
         self.sorter= sorter
         self.process_list= {}
-
-        self.process_dashboard = stdscr
-        self.process_services= ProcessMonitor(file_path)
-        self.process_formatter= ProcessFormatter()
-        self.__diff_engine= ScrollWinContentDiff()
-        self.sorter= sorter
-        self.process_list= {}
+        
         self.start_y= 0
         self.start_x= 0
         self.window_max_lines= 0

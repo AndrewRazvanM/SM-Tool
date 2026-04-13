@@ -60,7 +60,7 @@ class Nvidia:
             try:
                 pynvml.nvmlShutdown()
             
-            except pynvml.NVML_ERROR_UNINITIALIZED:
+            except pynvml.NVMLError_Uninitialized:
                 pass
 
     def get_nvidia_gpu_readings(self, schedule):

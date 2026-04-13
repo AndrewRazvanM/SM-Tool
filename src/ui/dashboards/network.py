@@ -112,7 +112,7 @@ class NetworkDashboard:
                     style= content_list[list_index].content.style
                     attr= style_map[style]
                     network_dashboard.addstr(5 + start_y + interface_index, 1+ start_x, content_list[list_index].content.value, attr)
-                    interface_index+= 1
+                interface_index+= 1
 
             if content_list[0].changed:
                 style= content_list[0].content.style

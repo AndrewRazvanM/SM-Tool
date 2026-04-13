@@ -1,5 +1,6 @@
 from readings.io import ReadTotalIO
-from ui.formatters import IOTotalFormatter
+from readings.system_pressure import IOPressure
+from ui.formatters import IOTotalFormatter, IOPressureFormatter
 from ui.contentdiff import ContentDiff
 import curses
 
@@ -22,8 +23,13 @@ class IOTotals:
 
     def __init__(self, stdscr: curses.window, file_path: object) -> object:
         self.io_tot_dashboard = stdscr
+
         self.io_tot_service = ReadTotalIO(file_path)
+        self.io_pressure_service = IOPressure(file_path)
+
         self.io_tot_formatter = IOTotalFormatter()
+        self.io_pressure_formatter = IOPressureFormatter()
+
         self.__diff_engine_io = ContentDiff() 
         self.__diff_engine_pressure = ContentDiff()
 
@@ -99,11 +105,23 @@ class IOTotals:
 
         style_map = self.style_map
 
+        if content_list_io[0].changed:
+            style= content_list_io[0].content.style
+            attr= style_map[style]
+            io_tot_dashboard.addstr(1 + start_y, 28 + start_x, content_list_io[0].content.value, attr)
+
+        io_tot_dashboard.noutrefresh()
+
     def update_data_pipeline(self, schedule: dict) -> list:
         io_tot_service = self.io_tot_service
+        io_pressure_service = self.io_pressure_service
         io_tot_formatter = self.io_tot_formatter
+        io_pressure_formatter = self.io_pressure_formatter
 
         io_tot_service.read_io_totals(schedule)
-        io_tot_formatter.format(io_tot_service.devices_total_io, schedule)
+        io_pressure_service.read_io(schedule)
+        io_tot_formatter.format(io_tot_service, schedule)
+        io_pressure_formatter.format(io_pressure_service, schedule)
 
         self.__diff_engine_io.check_differences(io_tot_formatter.formatted_io_output)
+        self.__diff_engine_pressure.check_differences(io_pressure_formatter.formatted_io_output)

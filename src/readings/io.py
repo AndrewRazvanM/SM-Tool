@@ -26,10 +26,10 @@ class DeviceIO:
         self.sectors_written= int(list[9])
         self.ios_in_progress= int(list[11])
         self.time_doing_ios_ms= int(list[12])
-        self.read_throughput= None
-        self.write_throughput= None
-        self.iops= None
-        self.time_busy= None
+        self.read_throughput= "N/A"
+        self.write_throughput= "N/A"
+        self.iops= "N/A"
+        self.time_busy= "N/A"
 
     def update(self, list, time_delta, sectors_size):
         
@@ -78,22 +78,26 @@ class ReadTotalIO:
         self.prev_time= current_time
         sectors_size= self.sectors_size
 
-        for line in self.file_path.get_file("disk_info"):
-            list= line.split(None, 13)
-            name= list[2]
-            
-            #check for devices that matter
-            if name.startswith(("loop", "ram")):
-                continue
+        try:
+            for line in self.file_path.get_file("disk_info"):
+                list= line.split(None, 13)
+                name= list[2]
+                
+                #check for devices that matter
+                if name.startswith(("loop", "ram")):
+                    continue
 
-            if name.startswith("sd") and  name[-1].isdigit():
-                continue
+                if name.startswith("sd") and  name[-1].isdigit():
+                    continue
 
-            if "p" in name and name[-1].isdigit():
-                continue
-            
-            if name not in self.devices_total_io:
-                self.devices_total_io[name]= DeviceIO(list)
-            
-            else:
-                self.devices_total_io[name].update(list, time_delta, sectors_size)
+                if "p" in name and name[-1].isdigit():
+                    continue
+                
+                if name not in self.devices_total_io:
+                    self.devices_total_io[name]= DeviceIO(list)
+                
+                else:
+                    self.devices_total_io[name].update(list, time_delta, sectors_size)
+
+        except FileNotFoundError:
+            return
