@@ -105,7 +105,7 @@ class Application:
             "cpu_load": Button("| Disable |", button_style_map),
             "io_tot": Button("| Disable |", button_style_map),
         }
-    
+    @staticmethod
     def clear_region_clrtoeol(win: curses.window, y: int, x: int, height: int):
         for row in range(height):
             win.move(y + row, x)
@@ -118,6 +118,7 @@ class Application:
 
             if key == curses.KEY_RESIZE:
                 stdscr.clear()
+                self.layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
                 self.layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
                 return
             
@@ -126,6 +127,7 @@ class Application:
                 self.files_path.close_all()
                 self.cpu_dashboard.cpu_temp_readings.close_temp_files()
                 self.nvidia_dashboard.nvidia_service.close_nvidia_drivers()
+                return
 
             if key == curses.KEY_UP:
                 self.scroll_pos = max(0, self.scroll_pos - 1)
@@ -150,7 +152,20 @@ class Application:
                 for btn in dash_buttons:
                     if dash_buttons[btn].is_clicked(my, mx):
                         layout_controller.usr_dash_disabled[btn] = True
-                        stdscr.clear()
+
+                        #clear only affected dashboards
+                        if btn in layout_controller.static_layout:
+                            clr_y = layout_controller.static_layout[btn].start_y
+                            clr_x = layout_controller.static_layout[btn].start_x
+                            clr_height = layout_controller.static_layout[btn].max_y
+                            self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
+                        else:
+                            clr_y = layout_controller.dynamic_layout[btn].start_y
+                            clr_x = layout_controller.dynamic_layout[btn].start_x
+                            #for dynamic dashboards, starting from the dashboard y pos, everything needs to be cleared. Doing just the dashboard height, might caused visual artifacts
+                            clr_height = layout_controller.window_max_lines - layout_controller.dynamic_layout[btn].start_y
+                            self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
+
                         layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
                         layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
                         return
