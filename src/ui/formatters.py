@@ -113,16 +113,16 @@ class MemoryPressureFormatter:
         f300_state = classify(f300, FULL_300_THRESHOLDS)
 
         # --- health classification ---
-        penalty= (s10 + s60 * 2.00 + s300 * 3.00 + f10 * 20.00 + f60 * 40.00 + f300 * 60.00)
-        health_score= max(0,100 - penalty)
-        health_bar_width= min(MEM_MAX_BAR_WIDTH, int(health_score/3.2))
-
-        if health_score == "N/A":
-            score_state = 3
-            bar_state = 3
-        else:
+        if s10 != "N/A":
+            penalty= (s10 + s60 * 2.00 + s300 * 3.00 + f10 * 20.00 + f60 * 40.00 + f300 * 60.00)
+            health_score= max(0,100 - penalty)
+            health_bar_width= min(MEM_MAX_BAR_WIDTH, int(health_score/3.2))
             score_state = 0 if health_score > 80 else 1 if health_score > 60 else 2
             bar_state = score_state
+        else:
+            health_score = "N/A"
+            health_bar_width = 0
+            bar_state = score_state = 3
 
         # --- write output ---
         out[0].value, out[0].style = f"{s10:<{txt_max_len}}", s10_state
