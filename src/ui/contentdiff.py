@@ -72,6 +72,7 @@ class ScrollWinDiffList:
         "row_content",
         "prev_pid",
         "starttime", #used to check if the PID was recycled
+        "prev_values"
     )
 
     def __init__(self, content: list):
@@ -79,7 +80,15 @@ class ScrollWinDiffList:
         self.row_update_values= False
         self.prev_pid= content[0].value
         self.starttime= content[12].value
-        self.row_content= content[:]  # avoid aliasing
+        self.row_content= content[:]
+        self.prev_values = {
+            3: content[3].value,
+            4: content[4].value,
+            5: content[5].value,
+            7: content[7].value,
+            8: content[8].value,
+            9: content[9].value,
+        }
 
 class ScrollWinContentDiff:
     __slots__ = (
@@ -96,6 +105,7 @@ class ScrollWinContentDiff:
         self._seen_pids = set()
         self._prev_order = []     # previous frame PID order
         self.force_write = False
+        
 
     def check_differences(self, visible_rows: list[list]):
         render_list = self.is_content_diff
@@ -139,12 +149,12 @@ class ScrollWinContentDiff:
 
             # Detect value changes
             values_changed = (
-                row[7].value != entry.row_content[7].value or
-                row[8].value != entry.row_content[8].value or
-                row[9].value != entry.row_content[9].value or
-                row[4].value != entry.row_content[4].value or
-                row[3].value != entry.row_content[3].value or
-                row[5].value != entry.row_content[5].value
+                row[7].value != entry.prev_values[7] or
+                row[8].value != entry.prev_values[8] or
+                row[9].value != entry.prev_values[9] or
+                row[4].value != entry.prev_values[4] or
+                row[3].value != entry.prev_values[3] or
+                row[5].value != entry.prev_values[5]
             )
 
             entry.row_changed = moved
