@@ -151,18 +151,26 @@ class Application:
                 for btn in dash_buttons:
                     if dash_buttons[btn].is_clicked(my, mx):
                         layout_controller.usr_dash_disabled[btn] = True
+                        top_dash_vis_nr = 0
+                        for button in layout_controller.top_dash_stack:
+                            # This is + True (1) or + False (0)
+                            top_dash_vis_nr += layout_controller.usr_dash_disabled[button]
 
                         #clear only affected dashboards
                         if btn in layout_controller.static_layout:
                             clr_y = layout_controller.static_layout[btn].start_y
                             clr_x = layout_controller.static_layout[btn].start_x
-                            clr_height = layout_controller.static_layout[btn].max_y
-                            self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
-                        else:
-                            clr_y = layout_controller.dynamic_layout[btn].start_y
-                            clr_x = layout_controller.dynamic_layout[btn].start_x
+                            if top_dash_vis_nr == 0:
+                                clr_height = layout_controller.static_layout[btn].max_y
+                                self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
+                            else:
+                                #if all dashboards are disabled, the entire screen needs to be cleared
+                                clr_height = layout_controller.window_max_lines - clr_y
+                                self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
+                            
+                        elif btn in layout_controller.dynamic_layout:
                             #for dynamic dashboards, starting from the dashboard y pos, everything needs to be cleared. Doing just the dashboard height, might caused visual artifacts
-                            clr_height = layout_controller.window_max_lines - layout_controller.dynamic_layout[btn].start_y
+                            clr_height = layout_controller.window_max_lines - clr_y
                             self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
 
                         layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
@@ -172,9 +180,8 @@ class Application:
                     stdscr.clear()
                     for dash in layout_controller.usr_dash_disabled:
                         layout_controller.usr_dash_disabled[dash] = False
-
-                    layout_controller.calculate_layout(self.dashboard_dict, self.dash_buttons, self.global_buttons)
                     layout_controller.on_resize(stdscr, self.dashboard_dict, self.dash_buttons, self.global_buttons)
+
                     return
 
             if key == -1:

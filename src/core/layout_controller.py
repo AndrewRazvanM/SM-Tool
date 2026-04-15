@@ -72,7 +72,7 @@ class LayoutController:
 
         # Defines the left-to-right render order of the top-row dashboards.
         self.top_dash_stack = ["cpu", "mem", "net", "nvidia", "io_tot"]
-
+        
         # Per-dashboard user toggle.  False = shown, True = hidden by the user.
         self.usr_dash_disabled = {
             "cpu": False, "cpu_load": False, "mem": False,
@@ -114,7 +114,8 @@ class LayoutController:
         Place top-row dashboards left to right until we run out of columns.
 
         Returns the x position we stopped at.  A return value of 0 means
-        no dashboards were placed (either all user-disabled or no room).
+        no dashboards were placed (either all user-disabled or no room). It
+        also track if at least 1 dashboards is enabled.
         """
         x = 0
         for key in self.top_dash_stack:
