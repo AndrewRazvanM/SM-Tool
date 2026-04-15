@@ -1,4 +1,9 @@
 **/__pycache__/
 **/sm_tool.egg-info/
 **/performance_tests/
+**/build/
+*.so
+*.c
+build/
+*.egg-info/
 

@@ -5,14 +5,15 @@ description = "System Monitoring tool written in Python."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "nvidia-ml-py>=13.590.48",        # NVIDIA NVML Python bindings
+    "nvidia-ml-py>=13.590.48",
 ]
 
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=61", "cython>=3.0"]  # add cython here
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
 sm-tool = "main:app_caller"
 
-
+[tool.setuptools.packages.find]
+where = ["src"]
