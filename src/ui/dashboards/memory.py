@@ -158,7 +158,7 @@ class MemoryDashboard:
         if bar.changed:
             attr = bar_style_map[bar.content.style]
             memory_dashboard.hline(start_y + 4, start_x + 20, " ", bar.content.bar_width, attr)
-            memory_dashboard.hline(start_y + 4, start_x + 20 + bar.content.bar_width, " ", 31 - bar.content.bar_width)
+            memory_dashboard.hline(start_y + 4, start_x + 20 + bar.content.bar_width, " ", 30 - bar.content.bar_width)
 
         # -------------------------
         # MEMORY INFO (bottom)

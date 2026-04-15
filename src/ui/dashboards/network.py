@@ -87,7 +87,9 @@ class NetworkDashboard:
             network_dashboard.addch(curses.ACS_UARROW)
             network_dashboard.addstr(" - Individual")
             network_dashboard.addch(curses.ACS_DARROW)
-            network_dashboard.addstr(4 + start_y, 1 + start_x, "Interfaces:")
+            network_dashboard.addstr(4 + start_y, 1 + start_x, "Network")
+            network_dashboard.addstr(4 + start_y, 11 + start_x, "Up")
+            network_dashboard.addstr(4 + start_y, 28 + start_x, "Dw:")
 
             network_dashboard.noutrefresh()
 
@@ -117,22 +119,22 @@ class NetworkDashboard:
             if content_list[0].changed:
                 style= content_list[0].content.style
                 attr= style_map[style]
-                network_dashboard.addstr(1 + start_y, 10 + start_x, content_list[0].content.value, attr)
+                network_dashboard.addstr(1 + start_y, 11 + start_x, content_list[0].content.value, attr)
 
             if content_list[1].changed:
                 style= content_list[1].content.style
                 attr= style_map[style]
-                network_dashboard.addstr(2 + start_y, 10 + start_x, content_list[1].content.value, attr)
+                network_dashboard.addstr(2 + start_y, 11 + start_x, content_list[1].content.value, attr)
 
             if content_list[2].changed:
                 style= content_list[2].content.style
                 attr= style_map[style]
-                network_dashboard.addstr(1 + start_y, 37 + start_x, content_list[2].content.value, attr)
+                network_dashboard.addstr(1 + start_y, 38 + start_x, content_list[2].content.value, attr)
 
             if content_list[3].changed:
                 style= content_list[3].content.style
                 attr= style_map[style]
-                network_dashboard.addstr(2 + start_y, 37 + start_x, content_list[3].content.value, attr)
+                network_dashboard.addstr(2 + start_y, 38 + start_x, content_list[3].content.value, attr)
 
             network_dashboard.noutrefresh()
 
