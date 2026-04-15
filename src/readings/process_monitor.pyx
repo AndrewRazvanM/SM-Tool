@@ -19,6 +19,7 @@ cdef class ProcessInfo:
         self.utime = 0
         self.stime = 0
         self.process_time = 0
+        self.process_up_time = 0.0
         self.num_threads = 0
         self.vsize = 0
         self.rss = 0
@@ -26,30 +27,27 @@ cdef class ProcessInfo:
         self.priority= 0
         self.command= " "
 
-class SystemUsername:
+cdef class SystemUsername:
 
-    __slots__ = (
-        "name", # This is the user's login name
-        "UID" # This is the user's ID
-    )
+    cdef public:
+        str name
+        int UID
 
     def __init__ (self, line):
-        self.name, _, self.UID, _= line.strip().split(":", 3)
+        self.name, _, uid, _= line.strip().split(":", 3)
+        self.UID = int(uid)
 
-class ProcessMonitor:
+cdef class ProcessMonitor:
     """
     Stores and updates the process lists.
      The update method can take a maximum number of processes scanned.
     """
-    __slots__=(
-        "__page_size",
-        "ticks_per_second",
-        "__prev_process_time",
-        "__proc_path",
-        "__sys_up_time_file",
-        "user_list",
-        "current_user",
-    )
+    cdef public:
+        int __page_size, ticks_per_second
+        double __prev_process_time
+        str __proc_path
+        object __sys_up_time_file
+        dict user_list, current_user
 
     def __init__(self, file_path: object):
         self.__page_size = sysconf("SC_PAGE_SIZE") #for calculating consumed memory
@@ -95,6 +93,10 @@ class ProcessMonitor:
     def update(self, schedule: dict, process_list: dict, data_length=30000) -> dict: 
         if schedule["processes"] is False:
             return
+
+        cdef int PID, utime, stime, num_threads, priority
+        cdef long vsize, rss, starttime, process_time
+        cdef double time_delta, cpu_load, sys_up_time, 
         
         current_time= monotonic()
         time_delta= current_time - self.__prev_process_time

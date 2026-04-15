@@ -1,5 +1,5 @@
 import curses
-from readings.processes import ProcessMonitor
+from readings.process_monitor import ProcessMonitor
 from ui.formatters import ProcessFormatter
 from core.sorter import sorter
 from ui.contentdiff import ScrollWinContentDiff

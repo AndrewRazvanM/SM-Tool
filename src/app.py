@@ -151,16 +151,19 @@ class Application:
                 for btn in dash_buttons:
                     if dash_buttons[btn].is_clicked(my, mx):
                         layout_controller.usr_dash_disabled[btn] = True
-                        top_dash_vis_nr = 0
-                        for button in layout_controller.top_dash_stack:
-                            # This is + True (1) or + False (0)
-                            top_dash_vis_nr += layout_controller.usr_dash_disabled[button]
+                        
 
                         #clear only affected dashboards
                         if btn in layout_controller.static_layout:
+                            top_dash_vis_nr = 0
+                            for button in layout_controller.top_dash_stack:
+                                # This is + True (1) or + False (0)
+                                top_dash_vis_nr += layout_controller.usr_dash_disabled[button]
+
                             clr_y = layout_controller.static_layout[btn].start_y
                             clr_x = layout_controller.static_layout[btn].start_x
-                            if top_dash_vis_nr == 0:
+                            #got 5 dashboards on the top row
+                            if top_dash_vis_nr < 5:
                                 clr_height = layout_controller.static_layout[btn].max_y
                                 self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
                             else:
@@ -169,6 +172,8 @@ class Application:
                                 self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
                             
                         elif btn in layout_controller.dynamic_layout:
+                            clr_y = layout_controller.dynamic_layout[btn].start_y
+                            clr_x = layout_controller.dynamic_layout[btn].start_x
                             #for dynamic dashboards, starting from the dashboard y pos, everything needs to be cleared. Doing just the dashboard height, might caused visual artifacts
                             clr_height = layout_controller.window_max_lines - clr_y
                             self.clear_region_clrtoeol(stdscr, clr_y, clr_x, clr_height)
