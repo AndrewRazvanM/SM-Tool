@@ -17,3 +17,8 @@ sm-tool = "main:app_caller"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv.workspace]
+members = [
+    "Webby",
+]
